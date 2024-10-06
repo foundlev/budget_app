@@ -1,0 +1,331 @@
+/* Определение переменных стилей */
+:root {
+    --primary-color: #4F46E5;
+    --primary-color-light: #6366F1;
+    --danger-color: #EF4444;
+    --success-color: #10B981;
+    --warning-color: #F59E0B;
+    --text-color: #1F2937;
+    --background-color: #F9FAFB;
+    --surface-color: #FFFFFF;
+    --border-radius: 16px;
+    --font-family: 'Nunito', sans-serif;
+}
+
+/* Поддержка тёмной темы */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #111827;
+        --surface-color: #1F2937;
+        --text-color: #F9FAFB;
+        --primary-color: #6366F1;
+        --primary-color-light: #818CF8;
+        --danger-color: #F87171;
+        --success-color: #21946e;
+    }
+}
+
+/* Сброс стилей и базовые настройки */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+h1, h2 {
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.input-container {
+    margin-bottom: 20px;
+}
+
+input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: var(--border-radius);
+    background-color: var(--surface-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s;
+    color: var(--text-color);
+}
+
+input[type="number"]:focus, input[type="text"]:focus {
+    outline: none;
+    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.2);
+}
+
+.options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.option-button {
+    flex: 1 1 calc(16.66% - 10px); /* 6 кнопок в строке */
+    padding: 12px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background-color: var(--surface-color);
+    color: var(--primary-color);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    text-align: center;
+    min-width: 80px; /* Минимальная ширина кнопки */
+}
+
+.option-button:hover {
+    background-color: var(--primary-color-light);
+    color: #fff;
+}
+
+.option-button.active {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.setting-item {
+    margin-bottom: 25px;
+}
+
+.hidden {
+    display: none;
+}
+
+#add-expense-btn, #calculate-btn, .max-button {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    margin-top: 10px;
+}
+
+#add-expense-btn:hover, #calculate-btn:hover, .max-button:hover {
+    background-color: var(--primary-color-light);
+}
+
+#add-expense-btn:active, #calculate-btn:active, .max-button:active {
+    transform: scale(0.98);
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+input[type="range"]:focus {
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -8px;
+    transition: background-color 0.3s;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+    background-color: var(--primary-color-light);
+}
+
+input[type="range"]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+input[type="range"]::-moz-range-track {
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+}
+
+input[type="range"]:hover::-moz-range-thumb {
+    background-color: var(--primary-color-light);
+}
+
+.max-button {
+    padding: 10px 20px;
+    background-color: var(--success-color);
+    width: 30%;
+}
+
+.mandatory-expense-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.mandatory-expense-item input[type="text"],
+.mandatory-expense-item input[type="number"] {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.mandatory-expense-item button {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Стили для итогов */
+#mandatory-expenses-total, #investment-total, #total-income-value, #total-expenses-value {
+    font-weight: 700;
+    font-size: 18px;
+    text-align: right;
+    color: var(--text-color);
+}
+
+/* Стили для результатов */
+#results-container {
+    background-color: var(--surface-color);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+#results-overview {
+    margin-bottom: 20px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.result-item span {
+    font-weight: 600;
+}
+
+#detailed-results {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 15px;
+}
+
+.detailed-item {
+    margin-bottom: 15px;
+}
+
+.detailed-item h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.detailed-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.detailed-item ul li {
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+.detailed-item ul li span {
+    font-weight: 600;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+    background-color: var(--surface-color);
+    border: 2px solid var(--primary-color);
+    padding: 10px;
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+input[type="checkbox"]:checked::before {
+    content: '\2713';
+    color: var(--primary-color);
+    position: absolute;
+    top: 0;
+    left: 5px;
+    font-size: 16px;
+}
+
+/* Стили для красивых блоков "Итого" */
+.total-block {
+    background-color: var(--surface-color);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 10px; /* Добавляет отступ сверху */
+}
+
+.total-block span {
+    color: var(--text-color);
+}
+
+.total-block span:first-child {
+    font-size: 18px;
+    color: var(--primary-color);
+}
+
+.total-block .fas {
+    margin-right: 8px;
+    color: var(--primary-color);
+}
+
