@@ -329,3 +329,33 @@ input[type="checkbox"]:checked::before {
     color: var(--primary-color);
 }
 
+/* Стили для селекта множителя */
+.multiplier-select {
+    margin-left: 10px;
+    padding: 10px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.multiplier-select:hover {
+    border-color: var(--primary-color-light);
+}
+
+.multiplier-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(79, 70, 229, 0.5);
+}
+
+/* Стили для блока "Остаток на проживание" */
+#remaining-living-expenses-value {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-color);
+}
+

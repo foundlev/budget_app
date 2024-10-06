@@ -31,9 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const addExpenseBtn = document.getElementById('add-expense-btn');
     const mandatoryExpensesList = document.getElementById('mandatory-expenses-list');
 
-    // Кнопка расчёта
-    const calculateBtn = document.getElementById('calculate-btn');
-
     // Инициализация обязательных трат из localStorage
     let mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
 
@@ -88,6 +85,40 @@ document.addEventListener('DOMContentLoaded', function() {
             expenseItem.appendChild(expenseAmountInput);
             expenseItem.appendChild(removeBtn);
 
+            // Внутри функции updateMandatoryExpensesList
+            const multiplierSelect = document.createElement('select');
+            multiplierSelect.classList.add('multiplier-select');
+            multiplierSelect.dataset.index = index;
+
+            // Добавляем опции для множителя
+            for (let i = 1; i <= 10; i += 0.1) {
+                // Условие для шагов
+                let step;
+                if (i <= 2) {
+                    step = 0.1;
+                } else if (i <= 5) {
+                    step = 0.25;
+                } else {
+                    step = 1;
+                }
+
+                // Форматируем значение
+                const value = (Math.round(i * 100) / 100).toFixed(2);
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = `x${value}`;
+                multiplierSelect.appendChild(option);
+            }
+
+            // Устанавливаем значение по умолчанию
+            multiplierSelect.value = expense.multiplier || '1.00';
+
+            // Добавляем обработчик изменения множителя
+            multiplierSelect.addEventListener('change', updateExpenseMultiplier);
+
+            // Добавляем селект в элемент траты
+            expenseItem.appendChild(multiplierSelect);
+
             mandatoryExpensesList.appendChild(expenseItem);
         });
 
@@ -122,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Добавление новой обязательной траты
     addExpenseBtn.addEventListener('click', function() {
-        mandatoryExpenses.push({ name: '', amount: 0 });
+        mandatoryExpenses.push({ name: '', amount: 0, multiplier: '1.00' });
         updateMandatoryExpensesList();
         updateTotalExpenses();
     });
@@ -140,20 +171,38 @@ document.addEventListener('DOMContentLoaded', function() {
         totalIncomeValue.textContent = `Итого: ${formatNumber(totalIncome)} ₽`;
     }
 
+    function updateExpenseMultiplier(event) {
+        const index = event.target.dataset.index;
+        mandatoryExpenses[index].multiplier = parseFloat(event.target.value);
+        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+        updateTotalExpenses(); // Обновление итоговой суммы расходов
+    }
+
     // Функция для обновления итоговой суммы расходов
     function updateTotalExpenses() {
         const totalIncome = getTotalIncome();
-        const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+        // Вычитаем обязательные траты с учетом множителей
+        const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => {
+            return sum + (expense.amount * expense.multiplier);
+        }, 0);
+
         const totalInvestments = Math.floor(totalIncome * (investmentPercentage / 100));
         const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
         const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
         const totalCushion = cushionAmount;
-        const rentPayment = 15400;
         const minLivingExpenses = dailyMin * 30;
 
-        const totalExpenses = totalMandatoryExpenses + totalInvestments + creditAmount + savingsAmount + totalCushion + rentPayment + minLivingExpenses;
+        const totalExpenses = totalMandatoryExpenses + totalInvestments + creditAmount + savingsAmount + totalCushion + minLivingExpenses;
+        const remainingAmount = Math.floor(totalIncome - totalExpenses);
 
         totalExpensesValue.textContent = `Итого: ${formatNumber(totalExpenses)} ₽`;
+
+        // Рассчитываем остаток на проживание
+        const remainingLivingExpenses = remainingAmount >= 0 ? remainingAmount : 0;
+        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / 30) : 0;
+
+        document.getElementById('remaining-living-expenses-value').textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
     }
 
     // Вызов функций при изменении зарплаты или остатка
@@ -361,9 +410,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalInvestments = Math.floor(totalIncome * (investmentPercentage / 100));
         remainingAmount -= totalInvestments;
 
-        // Оплата квартиры
-        remainingAmount -= 15400;
-
         // Минимальные ежедневные расходы
         const requiredLivingExpenses = dailyMin * 30;
         remainingAmount -= requiredLivingExpenses;
@@ -420,162 +466,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('budgetSettings', JSON.stringify(settings));
     }
 
-    // Функция для расчёта и отображения бюджета
-    function calculateBudget() {
-        const totalIncome = getTotalIncome();
-        let remainingAmount = totalIncome;
-
-        // Вычитаем обязательные траты
-        let totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        remainingAmount -= totalMandatoryExpenses;
-
-        // Вычитаем сумму на "подушку"
-        remainingAmount -= cushionAmount;
-
-        // Инвестиции
-        const totalInvestments = Math.floor(totalIncome * (investmentPercentage / 100));
-        remainingAmount -= totalInvestments;
-
-        // Оплата квартиры
-        remainingAmount -= 15400;
-
-        // Оплата кредитных карт
-        let creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
-        remainingAmount -= creditAmount;
-
-        // Накопления на покупку квартиры
-        let savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
-        remainingAmount -= savingsAmount;
-
-        // Проверяем минимальные ежедневные расходы
-        const minLivingExpenses = dailyMin * 30;
-
-        // Если остаток меньше минимальных ежедневных расходов, пытаемся скорректировать другие расходы
-        if (remainingAmount < minLivingExpenses) {
-            let deficit = minLivingExpenses - remainingAmount;
-
-            // Попытаемся уменьшить накопления
-            if (includeSavingsCheckbox.checked && savingsAmount > 0) {
-                let reduction = Math.min(deficit, savingsAmount);
-                savingsAmount -= reduction;
-                savingsAmountSlider.value = savingsAmount;
-                savingsAmountDisplay.textContent = `Сумма: ${formatNumber(savingsAmount)} ₽`;
-                remainingAmount += reduction;
-                deficit -= reduction;
-            }
-
-            // Попытаемся уменьшить оплату кредитов
-            if (deficit > 0 && includeCreditsCheckbox.checked && creditAmount > 11000) {
-                let reduction = Math.min(deficit, creditAmount - 11000);
-                creditAmount -= reduction;
-                creditAmountSlider.value = creditAmount;
-                creditAmountDisplay.textContent = `Сумма: ${formatNumber(creditAmount)} ₽`;
-                remainingAmount += reduction;
-                deficit -= reduction;
-            }
-
-            // Если всё ещё не хватает
-            if (deficit > 0) {
-                alert('Недостаточно средств для обеспечения минимальных ежедневных расходов. Пожалуйста, скорректируйте бюджет.');
-                return;
-            }
-        }
-
-        // Если остаток больше минимальных ежедневных расходов, распределяем остаток на ежедневные расходы
-        let livingExpenses = remainingAmount;
-
-        // Отображаем результаты
-        resultsSection.classList.remove('hidden');
-
-        // Краткий обзор результатов
-        const resultsOverview = document.getElementById('results-overview');
-        resultsOverview.innerHTML = '';
-
-        const overviewItems = [
-            { label: 'Зарплата', value: `${formatNumber(parseInt(salaryInput.value.replace(/\s/g, ''), 10)) || 0} ₽` },
-            { label: 'Остаток с прошлого месяца', value: `${formatNumber(parseInt(previousBalanceInput.value.replace(/\s/g, ''), 10)) || 0} ₽` },
-            { label: 'Общий доход', value: `${formatNumber(totalIncome)} ₽` },
-            { label: 'Общие расходы', value: `${formatNumber(totalIncome - remainingAmount - livingExpenses)} ₽` },
-            { label: 'Остаток на ежедневные расходы', value: `${formatNumber(livingExpenses)} ₽` },
-            { label: 'Это примерно', value: `${formatNumber(Math.floor(livingExpenses / 30))} ₽/день` },
-        ];
-
-        overviewItems.forEach(item => {
-            const div = document.createElement('div');
-            div.classList.add('result-item');
-            div.innerHTML = `<span>${item.label}:</span><span>${item.value}</span>`;
-            resultsOverview.appendChild(div);
-        });
-
-        // Подробные результаты
-        const detailedResults = document.getElementById('detailed-results');
-        detailedResults.innerHTML = '';
-
-        // Обязательные траты
-        if (totalMandatoryExpenses > 0) {
-            const div = document.createElement('div');
-            div.classList.add('detailed-item');
-            div.innerHTML = `<h3>Обязательные траты: ${formatNumber(totalMandatoryExpenses)} ₽</h3>`;
-            const ul = document.createElement('ul');
-            mandatoryExpenses.forEach(expense => {
-                const li = document.createElement('li');
-                li.innerHTML = `${expense.name}: <span>${formatNumber(expense.amount)} ₽</span>`;
-                ul.appendChild(li);
-            });
-            div.appendChild(ul);
-            detailedResults.appendChild(div);
-        }
-
-        // Инвестиции
-        if (totalInvestments > 0) {
-            const div = document.createElement('div');
-            div.classList.add('detailed-item');
-            div.innerHTML = `<h3>Инвестиции: ${formatNumber(totalInvestments)} ₽</h3>`;
-            // Распределение инвестиций можно добавить здесь
-            detailedResults.appendChild(div);
-        }
-
-        // Оплата кредитных карт
-        if (includeCreditsCheckbox.checked && creditAmount > 0) {
-            const div = document.createElement('div');
-            div.classList.add('detailed-item');
-            div.innerHTML = `<h3>Оплата кредитных карт: ${formatNumber(creditAmount)} ₽</h3>`;
-            const ul = document.createElement('ul');
-            for (let i = 1; i <= creditCardCount; i++) {
-                const li = document.createElement('li');
-                li.innerHTML = `Кредитная карта ${i}: <span>${formatNumber(Math.floor(creditAmount / creditCardCount))} ₽</span>`;
-                ul.appendChild(li);
-            }
-            div.appendChild(ul);
-            detailedResults.appendChild(div);
-        }
-
-        // Накопления
-        if (includeSavingsCheckbox.checked && savingsAmount > 0) {
-            const div = document.createElement('div');
-            div.classList.add('detailed-item');
-            div.innerHTML = `<h3>Накопления на покупку квартиры: ${formatNumber(savingsAmount)} ₽</h3>`;
-            detailedResults.appendChild(div);
-        }
-
-        // Оплата квартиры
-        const rentDiv = document.createElement('div');
-        rentDiv.classList.add('detailed-item');
-        rentDiv.innerHTML = `<h3>Оплата квартиры: 15 400 ₽</h3>`;
-        detailedResults.appendChild(rentDiv);
-
-        // Сумма на "подушку"
-        if (cushionAmount > 0) {
-            const div = document.createElement('div');
-            div.classList.add('detailed-item');
-            div.innerHTML = `<h3>Сумма на "подушку": ${formatNumber(cushionAmount)} ₽</h3>`;
-            detailedResults.appendChild(div);
-        }
-        saveSettings();
-    }
-
-    calculateBtn.addEventListener('click', calculateBudget);
-
     // Обновление отображения суммы инвестиций
     function updateInvestmentAmountDisplay() {
         const totalIncome = getTotalIncome();
@@ -623,6 +513,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!settings.includeSavings) {
                 savingsSettings.classList.add('hidden');
             }
+
+            // Загрузка обязательных трат с множителями
+            mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
+            updateMandatoryExpensesList();
+
+            // Обновите отображение множителей
+            mandatoryExpenses.forEach((expense, index) => {
+                const multiplierSelect = document.querySelector(`.multiplier-select[data-index="${index}"]`);
+                if (multiplierSelect) {
+                    multiplierSelect.value = expense.multiplier || '1.00';
+                }
+            });
 
             adjustSliders();
         }
