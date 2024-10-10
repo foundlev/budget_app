@@ -54,7 +54,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return number.toLocaleString('ru-RU');
     }
 
-    // Функция для обновления списка обязательных трат
+    // Функция форматирования суммы с символом рубля
+    function formatAmount(value) {
+        return formatNumber(value) + ' ₽';
+    }
+
+    // Функция форматирования множителя с 'x' перед числом
+    function formatMultiplier(value) {
+        return 'x' + parseFloat(value).toFixed(2);
+    }
+
+    // Функция обработки ввода суммы
+    function onAmountInput(event) {
+        const input = event.target;
+        let value = input.value.replace(/\D/g, '');
+        if (value) {
+            value = parseInt(value, 10).toLocaleString('ru-RU');
+            input.value = value + ' ₽';
+        } else {
+            input.value = '';
+        }
+    }
+
+    // Функция форматирования суммы при уходе из поля ввода
+    function formatAmountInput(event) {
+        const index = event.target.dataset.index;
+        const rawValue = event.target.value.replace(/\D/g, '');
+        let amount = parseInt(rawValue, 10) || 0;
+        mandatoryExpenses[index].amount = amount;
+        event.target.value = amount > 0 ? formatAmount(amount) : '';
+        updateTotalExpenses(); // Обновление итоговой суммы расходов
+        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+    }
+
+    // Функция обработки ввода множителя
+    function onMultiplierInput(event) {
+        const input = event.target;
+        // Удаляем все, кроме цифр, точки и запятой
+        let value = input.value.replace(/[^0-9.,]/g, '');
+        input.value = value;
+        input.classList.remove('invalid');
+    }
+
+    function formatMultiplierInput(event) {
+        const index = event.target.dataset.index;
+        let rawValue = event.target.value.replace(',', '.');
+        let multiplier = parseFloat(rawValue);
+
+        if (isNaN(multiplier) || multiplier <= 0 || multiplier > 20) {
+            // Выделяем поле красным
+            event.target.classList.add('invalid');
+            // Корректируем значение
+            if (isNaN(multiplier) || multiplier <= 0) {
+                multiplier = 1.00;
+            } else if (multiplier > 20) {
+                multiplier = 20.00;
+            }
+        } else {
+            // Убираем выделение
+            event.target.classList.remove('invalid');
+        }
+
+        // Обновляем значение множителя
+        mandatoryExpenses[index].multiplier = multiplier;
+
+        // Обновляем отображение
+        event.target.value = formatMultiplier(multiplier);
+
+        // Сохраняем в localStorage
+        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+
+        updateTotalExpenses(); // Обновление итоговой суммы расходов
+    }
+
+    // Функция обновления суммы траты (если хотите обновлять при вводе)
+    function updateExpenseAmount(event) {
+        const index = event.target.dataset.index;
+        const rawValue = event.target.value.replace(/\D/g, '');
+        let amount = parseInt(rawValue, 10) || 0;
+        mandatoryExpenses[index].amount = amount;
+        event.target.value = amount > 0 ? formatAmount(amount) : '';
+        updateTotalExpenses(); // Обновление итоговой суммы расходов
+        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+    }
+
+    // Обновленная функция updateMandatoryExpensesList
     function updateMandatoryExpensesList() {
         mandatoryExpensesList.innerHTML = '';
         mandatoryExpenses.forEach((expense, index) => {
@@ -70,55 +154,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const expenseAmountInput = document.createElement('input');
             expenseAmountInput.type = 'text';
-            expenseAmountInput.value = formatNumber(expense.amount);
+            expenseAmountInput.value = expense.amount > 0 ? formatAmount(expense.amount) : '';
             expenseAmountInput.placeholder = 'Сумма';
             expenseAmountInput.min = '0';
             expenseAmountInput.dataset.index = index;
-            expenseAmountInput.addEventListener('input', updateExpenseAmount);
+            expenseAmountInput.addEventListener('input', onAmountInput);
+            expenseAmountInput.addEventListener('blur', formatAmountInput);
 
+            // Создание поля ввода для множителя
+            const multiplierInput = document.createElement('input');
+            multiplierInput.type = 'text';
+            multiplierInput.value = expense.multiplier ? formatMultiplier(expense.multiplier) : 'x1.00';
+            multiplierInput.placeholder = 'Множитель';
+            multiplierInput.classList.add('multiplier-input');
+            multiplierInput.dataset.index = index;
+            multiplierInput.addEventListener('input', onMultiplierInput);
+            multiplierInput.addEventListener('blur', formatMultiplierInput);
+
+            // Создание кнопки удаления
             const removeBtn = document.createElement('button');
             removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
             removeBtn.dataset.index = index;
             removeBtn.addEventListener('click', removeExpense);
 
+            // Добавляем элементы в траты в правильном порядке
             expenseItem.appendChild(expenseNameInput);
             expenseItem.appendChild(expenseAmountInput);
+            expenseItem.appendChild(multiplierInput);
             expenseItem.appendChild(removeBtn);
 
-            // Внутри функции updateMandatoryExpensesList
-            const multiplierSelect = document.createElement('select');
-            multiplierSelect.classList.add('multiplier-select');
-            multiplierSelect.dataset.index = index;
-
-            // Добавляем опции для множителя
-            for (let i = 1; i <= 10; i += 0.1) {
-                // Условие для шагов
-                let step;
-                if (i <= 2) {
-                    step = 0.1;
-                } else if (i <= 5) {
-                    step = 0.25;
-                } else {
-                    step = 1;
-                }
-
-                // Форматируем значение
-                const value = (Math.round(i * 100) / 100).toFixed(2);
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = `x${value}`;
-                multiplierSelect.appendChild(option);
-            }
-
-            // Устанавливаем значение по умолчанию
-            multiplierSelect.value = expense.multiplier || '1.00';
-
-            // Добавляем обработчик изменения множителя
-            multiplierSelect.addEventListener('change', updateExpenseMultiplier);
-
-            // Добавляем селект в элемент траты
-            expenseItem.appendChild(multiplierSelect);
-
+            // Добавляем элемент траты в список
             mandatoryExpensesList.appendChild(expenseItem);
         });
 
@@ -173,12 +238,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateExpenseMultiplier(event) {
         const index = event.target.dataset.index;
-        mandatoryExpenses[index].multiplier = parseFloat(event.target.value);
+        let rawValue = event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+        let multiplier = parseFloat(rawValue);
+
+        if (isNaN(multiplier) || multiplier <= 0 || multiplier > 20) {
+            // Выделяем поле красным
+            event.target.classList.add('invalid');
+            // Корректируем значение
+            if (multiplier <= 0 || isNaN(multiplier)) {
+                multiplier = 0.01;
+            } else if (multiplier > 20) {
+                multiplier = 20;
+            }
+        } else {
+            // Убираем выделение
+            event.target.classList.remove('invalid');
+        }
+
+        // Обновляем значение множителя
+        mandatoryExpenses[index].multiplier = multiplier;
+
+        // Обновляем отображение
+        event.target.value = formatMultiplier(multiplier);
+
+        // Сохраняем в localStorage
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+
         updateTotalExpenses(); // Обновление итоговой суммы расходов
     }
 
-    // Функция для обновления итоговой суммы расходов
     function updateTotalExpenses() {
         const totalIncome = getTotalIncome();
 
@@ -193,7 +281,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalCushion = cushionAmount;
         const minLivingExpenses = dailyMin * 30;
 
+        // Запланированные расходы = обязательные траты + инвестиции + подушка + кредитные карты + накопления
         const totalExpenses = totalMandatoryExpenses + totalInvestments + creditAmount + savingsAmount + totalCushion + minLivingExpenses;
+
         const remainingAmount = Math.floor(totalIncome - totalExpenses);
 
         totalExpensesValue.textContent = `Итого: ${formatNumber(totalExpenses)} ₽`;
@@ -474,7 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
         investmentDisplay.textContent = `Сумма: ${formatNumber(investmentAmount)} ₽`;
     }
 
-   // При загрузке настроек
     function loadSettings() {
         const settings = JSON.parse(localStorage.getItem('budgetSettings'));
         if (settings) {
@@ -502,18 +591,6 @@ document.addEventListener('DOMContentLoaded', function() {
             selectOption(creditCardOptions, settings.creditCardCount.toString());
             creditCardCount = settings.creditCardCount;
 
-            if (settings.salary + settings.previousBalance > 10000) {
-                settingsSection.classList.remove('hidden');
-            }
-
-            if (!settings.includeCredits) {
-                creditSettings.classList.add('hidden');
-            }
-
-            if (!settings.includeSavings) {
-                savingsSettings.classList.add('hidden');
-            }
-
             // Загрузка обязательных трат с множителями
             mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
             updateMandatoryExpensesList();
@@ -527,6 +604,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             adjustSliders();
+
+            if (settings.salary + settings.previousBalance > 10000) {
+                settingsSection.classList.remove('hidden');
+            }
+
+            if (!settings.includeCredits) {
+                creditSettings.classList.add('hidden');
+            }
+
+            if (!settings.includeSavings) {
+                savingsSettings.classList.add('hidden');
+            }
         }
 
         changeCheckBoxSaving();
