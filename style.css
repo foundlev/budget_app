@@ -56,6 +56,11 @@ label {
     font-weight: 600;
 }
 
+.label-margin {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
 .input-container {
     margin-bottom: 20px;
 }

@@ -51,17 +51,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция форматирования чисел с разделением тысяч
     function formatNumber(number) {
-        return number.toLocaleString('ru-RU');
+        return number.toLocaleString('ru-RU').replace(',', '.');
+    }
+
+    function formatNumberInput(value) {
+        value = value.toString().replace(',', '.');
+        const parts = value.split('.');
+        parts[0] = parseInt(parts[0], 10).toLocaleString('ru-RU');
+        return parts.join('.');
     }
 
     // Функция форматирования суммы с символом рубля
     function formatAmount(value, currency = 'RUB') {
         if (currency === 'USD' || currency === 'USDT') {
-            return '$' + value;
+            return '$' + formatNumber(value);
         } else if (currency === 'RUB') {
             return formatNumber(value) + ' ₽';
         } else {
-            return value + ' ' + currency;
+            return formatNumber(value) + ' ' + currency;
         }
     }
 
@@ -147,11 +154,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (currency === 'USDT') {
                 const usdtToRub = rates['USDT_TO_RUB'] || 75; // Предполагаемый курс USDT к RUB
-                text.textContent = `USDT: ${usdtToRub} RUB`;
+                text.textContent = `USDT: ${formatNumber(usdtToRub)} RUB`;
             } else if (currency === 'USDT_TO_RUB') {
-                text.textContent = `USDT: ${rates[currency]} RUB`;
+                text.textContent = `USDT: ${formatNumber(rates[currency])} RUB`;
             } else {
-                text.textContent = `${currency}: ${rates[currency]} USDT`;
+                text.textContent = `${currency}: ${formatNumber(rates[currency])} USDT`;
             }
 
             rateItem.appendChild(icon);
@@ -215,7 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         mandatoryExpenses[index].amount = amount;
-        event.target.value = amount > 0 ? formatAmount(amount, currency) : '';
+
+        // Используем formatNumberInput вместо formatAmount
+        event.target.value = amount > 0 ? formatNumberInput(amount) : '';
         updateTotalExpenses(); // Обновление итоговой суммы расходов
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
 
@@ -333,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const expenseAmountInput = document.createElement('input');
             expenseAmountInput.type = 'text';
-            expenseAmountInput.value = expense.amount > 0 ? formatAmount(expense.amount, expense.currency) : '';
+            expenseAmountInput.value = expense.amount > 0 ? formatNumberInput(expense.amount) : '';
             expenseAmountInput.placeholder = 'Сумма';
             expenseAmountInput.min = '0';
             expenseAmountInput.dataset.index = index;
@@ -399,14 +408,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const multiplier = parseFloat(expense.multiplier) || 1;
         const amount = parseFloat(expense.amount) || 0;
 
+        let total;
         if (expense.currency === 'RUB' || !expense.currency) {
-            return amount * multiplier;
+            total = amount * multiplier;
         } else {
             const rates = loadExchangeRates();
             const usdtToRub = rates['USDT_TO_RUB'] || 75; // Курс USDT к RUB
             const currencyToUsdt = rates[expense.currency] || 1; // Курс выбранной валюты к USDT
-            return amount * multiplier * usdtToRub * currencyToUsdt;
+            total = amount * multiplier * usdtToRub * currencyToUsdt;
         }
+
+        return Math.ceil(total); // Округляем в большую сторону до целого числа
     }
 
     // Обновление функции updateTotalExpenses
@@ -507,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
         creditAmountSlider.min = 11000;
         creditAmountSlider.max = 100000;
         creditAmountSlider.value = 20000;
-        creditAmountDisplay.textContent = formatNumber(parseInt(creditAmountSlider.value));
+        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))}`;
 
         // Включаем накопления и устанавливаем значение
         includeSavingsCheckbox.checked = true;
@@ -515,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
         savingsAmountSlider.min = 0;
         savingsAmountSlider.max = 100000;
         savingsAmountSlider.value = 50000;
-        savingsAmountDisplay.textContent = formatNumber(parseInt(savingsAmountSlider.value));
+        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))}`;
 
         adjustSliders();
     }
@@ -527,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             creditSettings.classList.add('hidden');
             creditAmountSlider.value = 0;
-            creditAmountDisplay.textContent = '0 ₽';
+            creditAmountDisplay.textContent = 'На оплату кредитных карт: 0 ₽';
             adjustSliders();
         }
     }
@@ -538,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             savingsSettings.classList.add('hidden');
             savingsAmountSlider.value = 0;
-            savingsAmountDisplay.textContent = '0 ₽';
+            savingsAmountDisplay.textContent = 'Сумма на накопления: 0 ₽';
             adjustSliders();
         }
     }
@@ -611,14 +623,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Для слайдеров
     creditAmountSlider.addEventListener('input', function() {
-        creditAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
+        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
         adjustSliders();
         saveSettings();
         updateTotalExpenses(); // Обновление итоговой суммы расходов
     });
 
     savingsAmountSlider.addEventListener('input', function() {
-        savingsAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
+        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
         adjustSliders();
         saveSettings();
         updateTotalExpenses(); // Обновление итоговой суммы расходов
@@ -627,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Для кнопок Max
     creditMaxBtn.addEventListener('click', function() {
         creditAmountSlider.value = calculateMaxCreditAmount();
-        creditAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
+        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
         adjustSliders();
         saveSettings();
         updateTotalExpenses(); // Обновление итоговой суммы расходов
@@ -635,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     savingsMaxBtn.addEventListener('click', function() {
         savingsAmountSlider.value = calculateMaxSavingsAmount();
-        savingsAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
+        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
         adjustSliders();
         saveSettings();
         updateTotalExpenses(); // Обновление итоговой суммы расходов
@@ -685,14 +697,14 @@ document.addEventListener('DOMContentLoaded', function() {
         creditAmountSlider.max = maxCreditAmount;
         if (parseInt(creditAmountSlider.value, 10) > maxCreditAmount) {
             creditAmountSlider.value = maxCreditAmount;
-            creditAmountDisplay.textContent = `Сумма: ${formatNumber(maxCreditAmount)} ₽`;
+            creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(maxCreditAmount)} ₽`;
         }
 
         const maxSavingsAmount = calculateMaxSavingsAmount();
         savingsAmountSlider.max = maxSavingsAmount;
         if (parseInt(savingsAmountSlider.value, 10) > maxSavingsAmount) {
             savingsAmountSlider.value = maxSavingsAmount;
-            savingsAmountDisplay.textContent = `Сумма: ${formatNumber(maxSavingsAmount)} ₽`;
+            savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(maxSavingsAmount)} ₽`;
         }
     }
 
@@ -726,11 +738,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (settings) {
             includeCreditsCheckbox.checked = settings.includeCredits;
             creditAmountSlider.value = settings.creditAmount;
-            creditAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(settings.creditAmount, 10))} ₽`;
+            creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(settings.creditAmount, 10))} ₽`;
 
             includeSavingsCheckbox.checked = settings.includeSavings;
             savingsAmountSlider.value = settings.savingsAmount;
-            savingsAmountDisplay.textContent = `Сумма: ${formatNumber(parseInt(settings.savingsAmount, 10))} ₽`;
+            savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(settings.savingsAmount, 10))} ₽`;
 
             selectOption(investmentOptions, settings.investmentPercentage.toString());
             investmentPercentage = settings.investmentPercentage;
