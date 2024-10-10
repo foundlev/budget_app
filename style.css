@@ -300,7 +300,7 @@ input.invalid {
 }
 
 /* Стили для итогов */
-#mandatory-expenses-total, #investment-total, #total-income-value, #total-expenses-value {
+#mandatory-expenses-total, #investment-total, #total-income-value, #total-expenses-value, #min-daily-amount {
     font-weight: 700;
     font-size: 18px;
     text-align: right;

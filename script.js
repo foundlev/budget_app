@@ -505,6 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Выбор минимальных ежедневных расходов
         selectOption(dailyOptions, '1500');
+        document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
         dailyMin = 1500;
 
         // Сумма на "подушку"
@@ -581,6 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             selectOption(dailyOptions, btn.dataset.value);
             dailyMin = parseInt(btn.dataset.value);
+            document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
             adjustSliders();
             saveSettings();
             updateTotalExpenses(); // Обновление итоговой суммы расходов
@@ -750,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             selectOption(dailyOptions, settings.dailyMin.toString());
             dailyMin = settings.dailyMin;
+            document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
 
             cushionAmount = settings.cushionAmount;
             selectOption(cushionOptions, cushionAmount.toString());
