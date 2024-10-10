@@ -39,7 +39,7 @@
     <!-- Секция для отображения итогового дохода -->
     <div id="total-income-section" class="input-container">
         <div class="total-block">
-            <span><i class="fas fa-calculator"></i>Доступные средства</span>
+            <span><i class="fas fa-wallet"></i>Доступные средства</span>
             <span id="total-income-value">Итого: 0 ₽</span>
         </div>
     </div>
@@ -67,6 +67,11 @@
                     <button data-value="1750" class="option-button">1750 ₽</button>
                     <button data-value="2000" class="option-button">2000 ₽</button>
                 </div>
+                <!-- Добавляем выбор количества дней -->
+                <div class="options" id="days-options">
+                    <button data-value="15" class="option-button">15 дней</button>
+                    <button data-value="30" class="option-button">30 дней</button>
+                </div>
                 <div id="min-daily-amount">Сумма: 0 ₽</div>
             </div>
             <!-- Процент на инвестиции -->
@@ -82,6 +87,12 @@
                 </div>
                 <!-- Сумма инвестиций -->
                 <div id="investment-total">Инвестиции: 0 ₽</div>
+            </div>
+            <div id="investments-section">
+                <div id="investments-list">
+                    <!-- Список инвестиционных направлений -->
+                </div>
+                <button id="add-investment-btn"><i class="fas fa-plus"></i> Добавить инвестицию</button>
             </div>
             <!-- Сумма на "подушку" -->
             <div class="setting-item">
@@ -135,7 +146,7 @@
             </div>
             <!-- Блок "Остаток на проживание" -->
             <div class="total-block">
-                <span><i class="fas fa-wallet"></i>Остаток на проживание</span>
+                <span><i class="fas fa-home"></i>Остаток на проживание</span>
                 <span id="remaining-living-expenses-value">0 ₽ (0 ₽/день)</span>
             </div>
         </div>

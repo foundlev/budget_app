@@ -30,15 +30,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обязательные траты
     const addExpenseBtn = document.getElementById('add-expense-btn');
     const mandatoryExpensesList = document.getElementById('mandatory-expenses-list');
+    const daysOptions = document.getElementById('days-options').getElementsByClassName('option-button');
+
 
     // Инициализация обязательных трат из localStorage
     let mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
+    let investments = JSON.parse(localStorage.getItem('investments')) || [];
 
     // Начальные значения
     let investmentPercentage = 0; // Стартовое значение 0%
     let dailyMin = 1500;
     let cushionAmount = 10000;
     let creditCardCount = 1;
+    let selectedDays = 30;
 
     // Отображение блоков настроек при загрузке
     if (includeCreditsCheckbox.checked) {
@@ -129,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const icon = document.createElement('i');
             switch (currency) {
                 case 'USD':
-                    icon.classList.add('fas', 'fa-dollar-sign');
+                    icon.classList.add('fas', 'fa-money-bill-alt');
                     break;
                 case 'MDL':
                     icon.classList.add('fas', 'fa-money-bill');
@@ -144,7 +148,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon.classList.add('fas', 'fa-circle');
                     break;
                 case 'USDT':
-                    icon.classList.add('fas', 'fa-coins');
+                    icon.classList.add('fas', 'fa-dollar-sign');
+                    break;
+                case 'USDT_TO_RUB':
+                    icon.classList.add('fas', 'fa-dollar-sign');
                     break;
                 default:
                     icon.classList.add('fas', 'fa-money-bill-alt');
@@ -173,12 +180,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const now = new Date();
             const diffMs = now - lastUpdatedDate;
             const diffMinutes = Math.floor(diffMs / 60000);
+
             let timeAgoText = '';
 
             if (diffMinutes < 1) {
                 timeAgoText = 'менее 1 минуты назад';
-            } else {
+            } else if (diffMinutes < 60) {
                 timeAgoText = `${diffMinutes} мин. назад`;
+            } else if (diffMinutes < 1440) { // менее 24 часов
+                const hours = Math.floor(diffMinutes / 60);
+                const minutes = diffMinutes % 60;
+                timeAgoText = `${hours} ч. ${minutes} мин. назад`;
+            } else {
+                const days = Math.floor(diffMinutes / 1440);
+                const hours = Math.floor((diffMinutes % 1440) / 60);
+                timeAgoText = `${days} дн. ${hours} ч. назад`;
             }
 
             document.getElementById('last-updated').textContent = `Обновлено: ${timeAgoText}`;
@@ -425,32 +441,41 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTotalExpenses() {
         const totalIncome = getTotalIncome();
 
-        // Вычисляем сумму обязательных трат
+        // Сумма обязательных трат
         const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => {
             return sum + calculateExpenseTotal(expense);
         }, 0);
 
-        // Обновляем отображение общей суммы обязательных трат
-        document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalMandatoryExpenses)} ₽`;
+        // Сумма инвестиций
+        const totalInvestmentAmount = Math.floor(totalIncome * (investmentPercentage / 100));
 
-        const totalInvestments = Math.floor(totalIncome * (investmentPercentage / 100));
+        // Остальные расчёты
         const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
         const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
         const totalCushion = cushionAmount;
-        const minLivingExpenses = dailyMin * 30;
+        const minLivingExpenses = dailyMin * selectedDays;
 
-        // Запланированные расходы = обязательные траты + инвестиции + подушка + кредитные карты + накопления
-        const totalExpenses = totalMandatoryExpenses + totalInvestments + creditAmount + savingsAmount + totalCushion + minLivingExpenses;
-
+        const totalExpenses = totalMandatoryExpenses + totalInvestmentAmount + creditAmount + savingsAmount + totalCushion + minLivingExpenses;
         const remainingAmount = Math.floor(totalIncome - totalExpenses);
 
         totalExpensesValue.textContent = `Итого: ${formatNumber(totalExpenses)} ₽`;
 
         // Рассчитываем остаток на проживание
         const remainingLivingExpenses = remainingAmount >= 0 ? remainingAmount : 0;
-        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / 30) : 0;
+        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / selectedDays) : 0;
 
-        document.getElementById('remaining-living-expenses-value').textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
+        const remainingLivingExpensesValue = document.getElementById('remaining-living-expenses-value');
+        remainingLivingExpensesValue.textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
+
+        // Добавляем проверку
+        if (perDay < dailyMin) {
+            remainingLivingExpensesValue.classList.add('warning-text');
+        } else {
+            remainingLivingExpensesValue.classList.remove('warning-text');
+        }
+
+        // Обновляем отображение общей суммы обязательных трат
+        document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalMandatoryExpenses)} ₽`;
     }
 
     // Новые элементы для отображения итогов
@@ -462,6 +487,118 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalIncome = getTotalIncome();
         totalIncomeValue.textContent = `Итого: ${formatNumber(totalIncome)} ₽`;
     }
+
+    function calculateInvestmentAmount(investment) {
+        const totalIncome = getTotalIncome();
+        const totalInvestmentAmount = Math.floor(totalIncome * (investmentPercentage / 100));
+        return Math.floor(totalInvestmentAmount * (investment.percentage / 100));
+    }
+
+    function removeInvestment(index) {
+        investments.splice(index, 1);
+        updateInvestmentsList();
+        updateTotalExpenses();
+    }
+
+    function updateInvestmentsTotal() {
+        const totalIncome = getTotalIncome();
+        const totalInvestments = investments.reduce((sum, investment) => {
+            return sum + calculateInvestmentAmount(investment, totalIncome);
+        }, 0);
+
+        document.getElementById('investments-total').textContent = `Сумма: ${formatNumber(totalInvestments)} ₽`;
+    }
+
+    function updateInvestmentName(event) {
+        const index = event.target.dataset.index;
+        investments[index].name = event.target.value;
+        localStorage.setItem('investments', JSON.stringify(investments));
+    }
+
+    function onInvestmentPercentageInput(event) {
+        const input = event.target;
+        let value = input.value.replace(/[^0-9]/g, '');
+        input.value = value;
+    }
+
+    function formatInvestmentPercentageInput(event) {
+        const index = event.target.dataset.index;
+        let percentage = parseInt(event.target.value.replace(/[^0-9]/g, ''), 10) || 0;
+
+        if (percentage < 0) percentage = 0;
+        if (percentage > 100) percentage = 100;
+
+        investments[index].percentage = percentage;
+        event.target.value = percentage + '%';
+
+        // Проверяем сумму процентов
+        const totalDirectionPercentage = investments.reduce((sum, inv) => sum + (inv.percentage || 0), 0);
+        if (totalDirectionPercentage > 100) {
+            alert('Сумма процентов инвестиционных направлений не должна превышать 100%');
+            investments[index].percentage = 0;
+            event.target.value = '0%';
+        }
+
+        localStorage.setItem('investments', JSON.stringify(investments));
+        updateInvestmentsList();
+        updateTotalExpenses();
+    }
+
+    function updateInvestmentsList() {
+        const investmentsList = document.getElementById('investments-list');
+        investmentsList.innerHTML = '';
+        investments.forEach((investment, index) => {
+            const investmentItem = document.createElement('div');
+            investmentItem.classList.add('investment-item');
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = investment.name;
+            nameInput.placeholder = 'Название';
+            nameInput.dataset.index = index;
+            nameInput.addEventListener('input', updateInvestmentName);
+
+            const percentageInput = document.createElement('input');
+            percentageInput.type = 'text';
+            percentageInput.value = investment.percentage > 0 ? investment.percentage + '%' : '';
+            percentageInput.placeholder = '%';
+            percentageInput.dataset.index = index;
+            percentageInput.addEventListener('input', onInvestmentPercentageInput);
+            percentageInput.addEventListener('blur', formatInvestmentPercentageInput);
+
+            // Расчёт суммы для направления
+            const amountInput = document.createElement('input');
+            amountInput.type = 'text';
+            amountInput.value = formatAmount(calculateInvestmentAmount(investment), 'RUB');
+            amountInput.disabled = true;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            removeBtn.dataset.index = index;
+            removeBtn.addEventListener('click', () => {
+                removeInvestment(index);
+            });
+
+            investmentItem.appendChild(nameInput);
+            investmentItem.appendChild(percentageInput);
+            investmentItem.appendChild(amountInput);
+            investmentItem.appendChild(removeBtn);
+
+            investmentsList.appendChild(investmentItem);
+        });
+
+        localStorage.setItem('investments', JSON.stringify(investments));
+        // Обновляем отображение общей суммы инвестиций
+        updateInvestmentAmountDisplay();
+    }
+
+    function addInvestment() {
+        investments.push({ name: '', percentage: 0 });
+        updateInvestmentsList();
+        updateTotalExpenses();
+    }
+
+    document.getElementById('add-investment-btn').addEventListener('click', addInvestment);
 
     // Вызов функций при изменении зарплаты или остатка
     salaryInput.addEventListener('input', function(event) {
@@ -479,6 +616,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTotalIncome();
         updateTotalExpenses();
     });
+
+    function updateMinDailyAmountDisplay() {
+        document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * selectedDays))} ₽`;
+    }
 
     function showSettingsSection() {
         const totalIncome = getTotalIncome();
@@ -575,6 +716,17 @@ document.addEventListener('DOMContentLoaded', function() {
             adjustSliders();
             saveSettings();
             updateTotalExpenses(); // Обновление итоговой суммы расходов
+        });
+    }
+
+    for (let btn of daysOptions) {
+        btn.addEventListener('click', function() {
+            selectOption(daysOptions, btn.dataset.value);
+            selectedDays = parseInt(btn.dataset.value);
+            updateMinDailyAmountDisplay();
+            adjustSliders();
+            saveSettings();
+            updateTotalExpenses();
         });
     }
 
@@ -725,6 +877,10 @@ document.addEventListener('DOMContentLoaded', function() {
             creditCardCount: creditCardCount
         };
         localStorage.setItem('budgetSettings', JSON.stringify(settings));
+        localStorage.setItem('investments', JSON.stringify(investments));
+
+        settings.selectedDays = selectedDays;
+        localStorage.setItem('budgetSettings', JSON.stringify(settings));
     }
 
     // Обновление отображения суммы инвестиций
@@ -732,7 +888,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalIncome = getTotalIncome();
         const investmentAmount = Math.floor(totalIncome * (investmentPercentage / 100));
         const investmentDisplay = document.getElementById('investment-total');
-        investmentDisplay.textContent = `Сумма: ${formatNumber(investmentAmount)} ₽`;
+        investmentDisplay.textContent = `Инвестиции: ${formatNumber(investmentAmount)} ₽`;
     }
 
     function loadSettings() {
@@ -787,6 +943,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updateInvestmentAmountDisplay();
         updateTotalIncome();
         updateTotalExpenses();
+
+        investments = JSON.parse(localStorage.getItem('investments')) || [];
+        updateInvestmentsList();
+
+        selectedDays = settings.selectedDays || 30;
+        selectOption(daysOptions, selectedDays.toString());
+        updateMinDailyAmountDisplay();
     }
 
     // Форматирование чисел при вводе для зарплаты и остатка
@@ -807,5 +970,47 @@ document.addEventListener('DOMContentLoaded', function() {
     salaryInputField.addEventListener('input', formatInputNumber);
     previousBalanceInputField.addEventListener('input', formatInputNumber);
 
+    function calculateTotal() {
+        const totalIncome = getTotalIncome();
+
+        // Входящие суммы
+        const salary = parseInt(salaryInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        const previousBalance = parseInt(previousBalanceInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+
+        // Обязательные траты
+        const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => {
+            return sum + calculateExpenseTotal(expense);
+        }, 0);
+
+        // Сумма инвестиций
+        const totalInvestmentAmount = Math.floor(totalIncome * (investmentPercentage / 100));
+
+        // Подушка
+        const totalCushion = cushionAmount;
+
+        // Кредитные карты
+        const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
+        const creditCardCountValue = includeCreditsCheckbox.checked ? creditCardCount : 0;
+
+        // Накопления
+        const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
+
+        return {
+            in: {
+                salary: salary,
+                previousBalance: previousBalance
+            },
+            out: {
+                mandatoryExpenses: totalMandatoryExpenses,
+                investments: totalInvestmentAmount,
+                cushion: totalCushion,
+                creditPayments: creditAmount,
+                creditCardCount: creditCardCountValue,
+                savings: savingsAmount
+            }
+        };
+    }
+
     loadSettings();
+    console.log(calculateTotal());
 });
