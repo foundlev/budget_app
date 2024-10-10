@@ -55,8 +55,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Функция форматирования суммы с символом рубля
-    function formatAmount(value) {
-        return formatNumber(value) + ' ₽';
+    function formatAmount(value, currency = 'RUB') {
+        if (currency === 'USD' || currency === 'USDT') {
+            return '$' + value;
+        } else if (currency === 'RUB') {
+            return formatNumber(value) + ' ₽';
+        } else {
+            return value + ' ' + currency;
+        }
     }
 
     // Функция форматирования множителя с 'x' перед числом
@@ -64,34 +70,164 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'x' + parseFloat(value).toFixed(2);
     }
 
+    // Предустановленные курсы валют
+    const defaultExchangeRates = {
+        USDT: 1,
+        USDT_TO_RUB: 75,
+        USD: 1,
+        BTC: 30000,
+        MDL: 0.057,
+        TON: 2,
+        ETH: 2000
+    };
+
+    // Функция для загрузки курсов из localStorage или использования предустановленных
+    function loadExchangeRates() {
+        let rates = JSON.parse(localStorage.getItem('exchangeRates'));
+        if (!rates) {
+            rates = defaultExchangeRates;
+            document.getElementById('default-warning').classList.remove('hidden');
+        } else {
+            document.getElementById('default-warning').classList.add('hidden');
+        }
+        return rates;
+    }
+
+    // Функция для сохранения курсов в localStorage
+    function saveExchangeRates(rates) {
+        localStorage.setItem('exchangeRates', JSON.stringify(rates));
+        localStorage.setItem('exchangeRatesLastUpdated', new Date().toISOString());
+    }
+
+    // Функция-заглушка для обновления курсов
+    function updateExchangeRates() {
+        // Здесь можно сделать реальный запрос к API
+        const newRates = defaultExchangeRates; // Пока возвращаем предустановленные значения
+        saveExchangeRates(newRates);
+        displayExchangeRates();
+    }
+
+    // Функция для отображения курсов на странице
+    function displayExchangeRates() {
+        const rates = loadExchangeRates();
+        const ratesList = document.getElementById('exchange-rates-list');
+        ratesList.innerHTML = ''; // Очищаем список
+
+        // Создаем элементы для каждого курса
+        for (let currency in rates) {
+            if (currency === 'USDT') continue; // Пропускаем USDT
+            const rateItem = document.createElement('div');
+            rateItem.classList.add('exchange-rate');
+
+            const icon = document.createElement('i');
+            switch (currency) {
+                case 'USD':
+                    icon.classList.add('fas', 'fa-dollar-sign');
+                    break;
+                case 'MDL':
+                    icon.classList.add('fas', 'fa-money-bill');
+                    break;
+                case 'BTC':
+                    icon.classList.add('fab', 'fa-btc');
+                    break;
+                case 'ETH':
+                    icon.classList.add('fab', 'fa-ethereum');
+                    break;
+                case 'TON':
+                    icon.classList.add('fas', 'fa-circle');
+                    break;
+                case 'USDT':
+                    icon.classList.add('fas', 'fa-coins');
+                    break;
+                default:
+                    icon.classList.add('fas', 'fa-money-bill-alt');
+            }
+
+            const text = document.createElement('span');
+
+            if (currency === 'USDT') {
+                const usdtToRub = rates['USDT_TO_RUB'] || 75; // Предполагаемый курс USDT к RUB
+                text.textContent = `USDT: ${usdtToRub} RUB`;
+            } else if (currency === 'USDT_TO_RUB') {
+                text.textContent = `USDT: ${rates[currency]} RUB`;
+            } else {
+                text.textContent = `${currency}: ${rates[currency]} USDT`;
+            }
+
+            rateItem.appendChild(icon);
+            rateItem.appendChild(text);
+            ratesList.appendChild(rateItem);
+        }
+
+        // Обновляем время последнего обновления
+        const lastUpdated = localStorage.getItem('exchangeRatesLastUpdated');
+        if (lastUpdated) {
+            const lastUpdatedDate = new Date(lastUpdated);
+            const now = new Date();
+            const diffMs = now - lastUpdatedDate;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            let timeAgoText = '';
+
+            if (diffMinutes < 1) {
+                timeAgoText = 'менее 1 минуты назад';
+            } else {
+                timeAgoText = `${diffMinutes} мин. назад`;
+            }
+
+            document.getElementById('last-updated').textContent = `Обновлено: ${timeAgoText}`;
+        } else {
+            document.getElementById('last-updated').textContent = 'Обновлено: неизвестно';
+        }
+    }
+
+    // Обработчик нажатия на кнопку "Обновить"
+    document.getElementById('refresh-rates-btn').addEventListener('click', () => {
+        updateExchangeRates();
+    });
+
+    // Вызов отображения курсов при загрузке страницы
+    displayExchangeRates();
+
     // Функция обработки ввода суммы
     function onAmountInput(event) {
         const input = event.target;
-        let value = input.value.replace(/\D/g, '');
-        if (value) {
-            value = parseInt(value, 10).toLocaleString('ru-RU');
-            input.value = value + ' ₽';
-        } else {
-            input.value = '';
+        const index = input.dataset.index;
+        const currency = mandatoryExpenses[index].currency || 'RUB';
+        let value = input.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+
+        if (currency === 'RUB') {
+            // Для RUB оставляем только целые числа
+            value = value.replace(/\..*$/, '');
         }
+
+        input.value = value;
     }
 
     // Функция форматирования суммы при уходе из поля ввода
     function formatAmountInput(event) {
         const index = event.target.dataset.index;
-        const rawValue = event.target.value.replace(/\D/g, '');
-        let amount = parseInt(rawValue, 10) || 0;
+        let value = event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+        let amount = parseFloat(value) || 0;
+        const currency = mandatoryExpenses[index].currency || 'RUB';
+
+        if (currency === 'RUB') {
+            amount = Math.round(amount);
+        }
+
         mandatoryExpenses[index].amount = amount;
-        event.target.value = amount > 0 ? formatAmount(amount) : '';
+        event.target.value = amount > 0 ? formatAmount(amount, currency) : '';
         updateTotalExpenses(); // Обновление итоговой суммы расходов
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+
+        // Обновляем итоговую стоимость
+        updateExpenseTotalCost(index);
     }
 
     // Функция обработки ввода множителя
     function onMultiplierInput(event) {
         const input = event.target;
         // Удаляем все, кроме цифр, точки и запятой
-        let value = input.value.replace(/[^0-9.,]/g, '');
+        let value = input.value.replace(/[^0-9.,]/g, '').replace(',', '.');
         input.value = value;
         input.classList.remove('invalid');
     }
@@ -125,17 +261,26 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
 
         updateTotalExpenses(); // Обновление итоговой суммы расходов
+
+        // Обновляем итоговую стоимость
+        updateExpenseTotalCost(index);
     }
 
-    // Функция обновления суммы траты (если хотите обновлять при вводе)
-    function updateExpenseAmount(event) {
+    // Функция для обработки изменения валюты
+    function onCurrencyChange(event) {
         const index = event.target.dataset.index;
-        const rawValue = event.target.value.replace(/\D/g, '');
-        let amount = parseInt(rawValue, 10) || 0;
-        mandatoryExpenses[index].amount = amount;
-        event.target.value = amount > 0 ? formatAmount(amount) : '';
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
+        mandatoryExpenses[index].currency = event.target.value;
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
+        updateMandatoryExpensesList();
+        updateTotalExpenses();
+    }
+
+    // Функция для обновления итоговой стоимости траты
+    function updateExpenseTotalCost(index) {
+        const expense = mandatoryExpenses[index];
+        const totalCost = calculateExpenseTotal(expense);
+        const totalCostInput = document.querySelector(`.total-cost-input[data-index="${index}"]`);
+        totalCostInput.value = formatAmount(totalCost, 'RUB');
     }
 
     // Обновленная функция updateMandatoryExpensesList
@@ -145,6 +290,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const expenseItem = document.createElement('div');
             expenseItem.classList.add('mandatory-expense-item');
 
+            // Поле для отображения итоговой стоимости
+            const totalCostInput = document.createElement('input');
+            totalCostInput.type = 'text';
+            totalCostInput.value = formatAmount(calculateExpenseTotal(expense), 'RUB');
+            totalCostInput.disabled = true;
+            totalCostInput.classList.add('total-cost-input');
+            totalCostInput.dataset.index = index;
+
             const expenseNameInput = document.createElement('input');
             expenseNameInput.type = 'text';
             expenseNameInput.value = expense.name;
@@ -152,9 +305,35 @@ document.addEventListener('DOMContentLoaded', function() {
             expenseNameInput.dataset.index = index;
             expenseNameInput.addEventListener('input', updateExpenseName);
 
+            // Создаем обертку для селекта
+            const currencySelectWrapper = document.createElement('div');
+            currencySelectWrapper.classList.add('currency-select-wrapper');
+
+            // Создание выпадающего списка для выбора валюты
+            const currencySelect = document.createElement('select');
+            currencySelect.classList.add('currency-select');
+            currencySelect.dataset.index = index;
+
+            // Добавляем селект в обертку
+            currencySelectWrapper.appendChild(currencySelect);
+
+            const currencies = ['RUB', 'USD', 'USDT', 'MDL', 'BTC', 'ETH', 'TON'];
+            currencies.forEach(curr => {
+                const option = document.createElement('option');
+                option.value = curr;
+                option.textContent = curr;
+                currencySelect.appendChild(option);
+            });
+
+            // Устанавливаем выбранную валюту
+            currencySelect.value = expense.currency || 'RUB';
+
+            // Обработчик изменения валюты
+            currencySelect.addEventListener('change', onCurrencyChange);
+
             const expenseAmountInput = document.createElement('input');
             expenseAmountInput.type = 'text';
-            expenseAmountInput.value = expense.amount > 0 ? formatAmount(expense.amount) : '';
+            expenseAmountInput.value = expense.amount > 0 ? formatAmount(expense.amount, expense.currency) : '';
             expenseAmountInput.placeholder = 'Сумма';
             expenseAmountInput.min = '0';
             expenseAmountInput.dataset.index = index;
@@ -180,7 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Добавляем элементы в траты в правильном порядке
             expenseItem.appendChild(expenseNameInput);
             expenseItem.appendChild(expenseAmountInput);
+            expenseItem.appendChild(currencySelectWrapper);
             expenseItem.appendChild(multiplierInput);
+            expenseItem.appendChild(totalCostInput);
             expenseItem.appendChild(removeBtn);
 
             // Добавляем элемент траты в список
@@ -198,16 +379,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
     }
 
-    // Вызов функции при изменении обязательных трат
-    function updateExpenseAmount(event) {
-        const index = event.target.dataset.index;
-        const rawValue = event.target.value.replace(/\s/g, '');
-        mandatoryExpenses[index].amount = parseInt(rawValue, 10) || 0;
-        event.target.value = mandatoryExpenses[index].amount > 0 ? formatNumber(mandatoryExpenses[index].amount) : '';
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
-        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
-    }
-
     // Удаление траты
     function removeExpense(event) {
         const index = event.currentTarget.dataset.index; // Используем event.currentTarget
@@ -218,62 +389,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Добавление новой обязательной траты
     addExpenseBtn.addEventListener('click', function() {
-        mandatoryExpenses.push({ name: '', amount: 0, multiplier: '1.00' });
+        mandatoryExpenses.push({ name: '', amount: 0, multiplier: '1.00', currency: 'RUB' });
         updateMandatoryExpensesList();
         updateTotalExpenses();
     });
 
-    // Обновление списка обязательных трат при загрузке страницы
-    updateMandatoryExpensesList();
+    // Функция для расчета итоговой стоимости траты
+    function calculateExpenseTotal(expense) {
+        const multiplier = parseFloat(expense.multiplier) || 1;
+        const amount = parseFloat(expense.amount) || 0;
 
-    // Новые элементы для отображения итогов
-    const totalIncomeValue = document.getElementById('total-income-value');
-    const totalExpensesValue = document.getElementById('total-expenses-value');
-
-    // Функция для обновления итоговой суммы доходов
-    function updateTotalIncome() {
-        const totalIncome = getTotalIncome();
-        totalIncomeValue.textContent = `Итого: ${formatNumber(totalIncome)} ₽`;
-    }
-
-    function updateExpenseMultiplier(event) {
-        const index = event.target.dataset.index;
-        let rawValue = event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
-        let multiplier = parseFloat(rawValue);
-
-        if (isNaN(multiplier) || multiplier <= 0 || multiplier > 20) {
-            // Выделяем поле красным
-            event.target.classList.add('invalid');
-            // Корректируем значение
-            if (multiplier <= 0 || isNaN(multiplier)) {
-                multiplier = 0.01;
-            } else if (multiplier > 20) {
-                multiplier = 20;
-            }
+        if (expense.currency === 'RUB' || !expense.currency) {
+            return amount * multiplier;
         } else {
-            // Убираем выделение
-            event.target.classList.remove('invalid');
+            const rates = loadExchangeRates();
+            const usdtToRub = rates['USDT_TO_RUB'] || 75; // Курс USDT к RUB
+            const currencyToUsdt = rates[expense.currency] || 1; // Курс выбранной валюты к USDT
+            return amount * multiplier * usdtToRub * currencyToUsdt;
         }
-
-        // Обновляем значение множителя
-        mandatoryExpenses[index].multiplier = multiplier;
-
-        // Обновляем отображение
-        event.target.value = formatMultiplier(multiplier);
-
-        // Сохраняем в localStorage
-        localStorage.setItem('mandatoryExpenses', JSON.stringify(mandatoryExpenses));
-
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
     }
 
+    // Обновление функции updateTotalExpenses
     function updateTotalExpenses() {
         const totalIncome = getTotalIncome();
 
-        // Вычитаем обязательные траты с учетом множителей
+        // Вычисляем сумму обязательных трат
         const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => {
-            return sum + (expense.amount * expense.multiplier);
+            return sum + calculateExpenseTotal(expense);
         }, 0);
+
+        // Обновляем отображение общей суммы обязательных трат
+        document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalMandatoryExpenses)} ₽`;
 
         const totalInvestments = Math.floor(totalIncome * (investmentPercentage / 100));
         const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
@@ -295,15 +441,26 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('remaining-living-expenses-value').textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
     }
 
+    // Новые элементы для отображения итогов
+    const totalIncomeValue = document.getElementById('total-income-value');
+    const totalExpensesValue = document.getElementById('total-expenses-value');
+
+    // Функция для обновления итоговой суммы доходов
+    function updateTotalIncome() {
+        const totalIncome = getTotalIncome();
+        totalIncomeValue.textContent = `Итого: ${formatNumber(totalIncome)} ₽`;
+    }
+
     // Вызов функций при изменении зарплаты или остатка
-    salaryInput.addEventListener('input', function() {
+    salaryInput.addEventListener('input', function(event) {
         formatInputNumber(event);
         showSettingsSection();
         saveSettings();
         updateTotalIncome();
         updateTotalExpenses();
     });
-    previousBalanceInput.addEventListener('input', function() {
+
+    previousBalanceInput.addEventListener('input', function(event) {
         formatInputNumber(event);
         showSettingsSection();
         saveSettings();
@@ -323,8 +480,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getTotalIncome() {
-        const salary = parseInt(salaryInput.value.replace(/\s/g, ''), 10) || 0;
-        const previousBalance = parseInt(previousBalanceInput.value.replace(/\s/g, ''), 10) || 0;
+        const salary = parseInt(salaryInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        const previousBalance = parseInt(previousBalanceInput.value.replace(/[^0-9]/g, ''), 10) || 0;
         return salary + previousBalance;
     }
 
@@ -408,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
- for (let btn of dailyOptions) {
+    for (let btn of dailyOptions) {
         btn.addEventListener('click', function() {
             selectOption(dailyOptions, btn.dataset.value);
             dailyMin = parseInt(btn.dataset.value);
@@ -490,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let remainingAmount = totalIncome;
 
         // Вычитаем обязательные траты
-        let totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        let totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => sum + calculateExpenseTotal(expense), 0);
         remainingAmount -= totalMandatoryExpenses;
 
         // Вычитаем сумму на "подушку"
@@ -585,8 +742,8 @@ document.addEventListener('DOMContentLoaded', function() {
             cushionAmount = settings.cushionAmount;
             selectOption(cushionOptions, cushionAmount.toString());
 
-            salaryInput.value = formatNumber(settings.salary);
-            previousBalanceInput.value = formatNumber(settings.previousBalance);
+            salaryInput.value = formatNumber(settings.salary) + ' ₽';
+            previousBalanceInput.value = formatNumber(settings.previousBalance) + ' ₽';
 
             selectOption(creditCardOptions, settings.creditCardCount.toString());
             creditCardCount = settings.creditCardCount;
@@ -594,14 +751,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Загрузка обязательных трат с множителями
             mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
             updateMandatoryExpensesList();
-
-            // Обновите отображение множителей
-            mandatoryExpenses.forEach((expense, index) => {
-                const multiplierSelect = document.querySelector(`.multiplier-select[data-index="${index}"]`);
-                if (multiplierSelect) {
-                    multiplierSelect.value = expense.multiplier || '1.00';
-                }
-            });
 
             adjustSliders();
 
@@ -621,11 +770,9 @@ document.addEventListener('DOMContentLoaded', function() {
         changeCheckBoxSaving();
         changeCheckBoxCredit();
         updateInvestmentAmountDisplay();
-        updateTotalIncome();    // Добавьте вызов для обновления итогового дохода
-        updateTotalExpenses();  // Добавьте вызов для обновления итоговых расходов
+        updateTotalIncome();
+        updateTotalExpenses();
     }
-
-    updateMandatoryExpensesList();
 
     // Форматирование чисел при вводе для зарплаты и остатка
     const salaryInputField = document.getElementById('salary-input');
@@ -636,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let value = input.value.replace(/\D/g, '');
         if (value) {
             value = parseInt(value, 10).toLocaleString('ru-RU');
-            input.value = value;
+            input.value = value + ' ₽';
         } else {
             input.value = '';
         }

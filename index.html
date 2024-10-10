@@ -12,37 +12,31 @@
 <div class="container">
     <h1>Калькулятор Бюджета</h1>
 
-    <!-- Новый блок с курсами валют -->
+    <!-- Блок с курсами валют -->
     <div id="exchange-rates">
-        <div class="exchange-rate">
-            <i class="fas fa-dollar-sign"></i> USD: 75₽
+        <div id="exchange-rates-header">
+            <span>Курсы валют</span>
+            <button id="refresh-rates-btn">Обновить</button>
         </div>
-        <div class="exchange-rate">
-            <i class="fas fa-money-bill"></i> MDL: $0.057
+        <div id="exchange-rates-list">
+            <!-- Курсы валют будут загружаться динамически -->
         </div>
-        <div class="exchange-rate">
-            <i class="fab fa-btc"></i> BTC: $30,000
-        </div>
-        <div class="exchange-rate">
-            <i class="fas fa-coins"></i> USDT: $1
-        </div>
-        <div class="exchange-rate">
-            <i class="fab fa-ethereum"></i> ETH: $2,000
-        </div>
-        <div class="exchange-rate">
-            <i class="fas fa-circle"></i> TON: $2
+        <div id="exchange-rates-footer">
+            <span id="last-updated">Обновлено: неизвестно</span>
+            <span id="default-warning" class="hidden">Используются предустановленные курсы</span>
         </div>
     </div>
 
+    <!-- Блок ввода зарплаты -->
     <div id="salary-section" class="input-container">
-        <label for="salary-input">Введите вашу зарплату (руб):</label>
+        <label for="salary-input">Введите вашу зарплату:</label>
         <input type="text" id="salary-input" placeholder="Введите сумму" min="0">
     </div>
     <div id="previous-balance-section" class="input-container">
-        <label for="previous-balance-input">Оставшиеся средства с прошлого месяца (руб):</label>
+        <label for="previous-balance-input">Оставшиеся средства с прошлого месяца:</label>
         <input type="text" id="previous-balance-input" placeholder="Введите сумму" min="0" value="0">
     </div>
-    <!-- Новая секция для отображения итогового дохода -->
+    <!-- Секция для отображения итогового дохода -->
     <div id="total-income-section" class="input-container">
         <div class="total-block">
             <span><i class="fas fa-calculator"></i>Доступные средства</span>
@@ -90,7 +84,7 @@
             </div>
             <!-- Сумма на "подушку" -->
             <div class="setting-item">
-                <label>Сумма на "подушку" (руб):</label>
+                <label>Сумма на "подушку":</label>
                 <div class="options" id="cushion-options">
                     <button data-value="0" class="option-button">0</button>
                     <button data-value="2500" class="option-button">2 500</button>
@@ -105,7 +99,6 @@
                     <button data-value="25000" class="option-button">25 000</button>
                     <button data-value="30000" class="option-button">30 000</button>
                 </div>
-                <!-- Поле ввода удалено -->
             </div>
             <!-- Оплата кредитных карт -->
             <div class="setting-item">
@@ -117,52 +110,40 @@
                         <button data-value="2" class="option-button">2</button>
                         <button data-value="3" class="option-button">3</button>
                     </div>
-                    <label>Сумма на оплату кредитных карт (руб):</label>
+                    <label>Сумма на оплату кредитных карт:</label>
                     <div class="slider-container">
                         <input type="range" id="credit-amount-slider" min="11000" max="100000" step="1000" value="20000">
                         <button id="credit-max-btn" class="max-button">Max</button>
                     </div>
-                    <span id="credit-amount-display">20 000</span>
+                    <span id="credit-amount-display">Сумма: 20 000 ₽</span>
                 </div>
             </div>
             <!-- Накопления на покупку квартиры -->
             <div class="setting-item">
                 <label><input type="checkbox" id="include-savings"> Накопления на покупку квартиры</label>
                 <div id="savings-settings" class="hidden">
-                    <label>Сумма на накопления (руб):</label>
+                    <label>Сумма на накопления:</label>
                     <div class="slider-container">
                         <input type="range" id="savings-amount-slider" min="0" max="100000" step="1000" value="50000">
                         <button id="savings-max-btn" class="max-button">Max</button>
                     </div>
-                    <span id="savings-amount-display">50 000</span>
+                    <span id="savings-amount-display">Сумма: 50 000 ₽</span>
                 </div>
             </div>
-            <!-- Новая секция для отображения итоговых трат -->
+            <!-- Секция для отображения итоговых трат -->
             <div class="total-block">
                 <span><i class="fas fa-calculator"></i>Запланированные расходы</span>
                 <span id="total-expenses-value">0 ₽</span>
             </div>
             <!-- Блок "Остаток на проживание" -->
             <div class="total-block">
-                <span><i class="fas fa-wallet"></i> Остаток на проживание</span>
+                <span><i class="fas fa-wallet"></i>Остаток на проживание</span>
                 <span id="remaining-living-expenses-value">0 ₽ (0 ₽/день)</span>
             </div>
         </div>
     </div>
-    <!-- Результаты -->
-    <div id="results-section" class="hidden">
-        <h2>Результаты</h2>
-        <div id="results-container">
-            <div id="results-overview">
-                <!-- Краткий обзор результатов -->
-            </div>
-            <div id="detailed-results">
-                <!-- Подробные результаты будут отображаться здесь -->
-            </div>
-        </div>
-    </div>
+    <!-- Подключение скрипта -->
+    <script src="script.js"></script>
 </div>
-<!-- Подключение скрипта -->
-<script src="script.js"></script>
 </body>
 </html>
