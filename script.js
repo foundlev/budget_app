@@ -8,17 +8,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Оплата кредитных карт
     const includeCreditsCheckbox = document.getElementById('include-credits');
     const creditSettings = document.getElementById('credit-settings');
-    const creditAmountSlider = document.getElementById('credit-amount-slider');
-    const creditAmountDisplay = document.getElementById('credit-amount-display');
     const creditMaxBtn = document.getElementById('credit-max-btn');
-    const creditCardOptions = document.getElementById('credit-card-options').getElementsByClassName('option-button');
+    const creditAmountInput = document.getElementById('credit-amount-input');
+    const creditIncreaseBtn = document.getElementById('credit-increase-btn');
+    const creditDecreaseBtn = document.getElementById('credit-decrease-btn');
 
     // Накопления на покупку квартиры
     const includeSavingsCheckbox = document.getElementById('include-savings');
     const savingsSettings = document.getElementById('savings-settings');
-    const savingsAmountSlider = document.getElementById('savings-amount-slider');
-    const savingsAmountDisplay = document.getElementById('savings-amount-display');
     const savingsMaxBtn = document.getElementById('savings-max-btn');
+    const savingsAmountInput = document.getElementById('savings-amount-input');
+    const savingsIncreaseBtn = document.getElementById('savings-increase-btn');
+    const savingsDecreaseBtn = document.getElementById('savings-decrease-btn');
 
     // Процент на инвестиции и минимальные ежедневные расходы
     const investmentOptions = document.getElementById('investment-options').getElementsByClassName('option-button');
@@ -32,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const mandatoryExpensesList = document.getElementById('mandatory-expenses-list');
     const daysOptions = document.getElementById('days-options').getElementsByClassName('option-button');
 
-
     // Инициализация обязательных трат из localStorage
     let mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
     let investments = JSON.parse(localStorage.getItem('investments')) || [];
@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let investmentPercentage = 0; // Стартовое значение 0%
     let dailyMin = 1500;
     let cushionAmount = 10000;
-    let creditCardCount = 1;
     let selectedDays = 30;
 
     // Отображение блоков настроек при загрузке
@@ -262,18 +261,13 @@ document.addEventListener('DOMContentLoaded', function() {
         let rawValue = event.target.value.replace(',', '.');
         let multiplier = parseFloat(rawValue);
 
-        if (isNaN(multiplier) || multiplier <= 0 || multiplier > 20) {
-            // Выделяем поле красным
-            event.target.classList.add('invalid');
+        if (isNaN(multiplier) || multiplier < 0 || multiplier > 20) {
             // Корректируем значение
-            if (isNaN(multiplier) || multiplier <= 0) {
+            if (isNaN(multiplier) || multiplier < 0) {
                 multiplier = 1.00;
             } else if (multiplier > 20) {
                 multiplier = 20.00;
             }
-        } else {
-            // Убираем выделение
-            event.target.classList.remove('invalid');
         }
 
         // Обновляем значение множителя
@@ -368,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Создание поля ввода для множителя
             const multiplierInput = document.createElement('input');
             multiplierInput.type = 'text';
-            multiplierInput.value = expense.multiplier ? formatMultiplier(expense.multiplier) : 'x1.00';
+            multiplierInput.value = expense.multiplier >= 0 ? formatMultiplier(expense.multiplier) : 'x1.00';
             multiplierInput.placeholder = 'Множитель';
             multiplierInput.classList.add('multiplier-input');
             multiplierInput.dataset.index = index;
@@ -421,7 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция для расчета итоговой стоимости траты
     function calculateExpenseTotal(expense) {
-        const multiplier = parseFloat(expense.multiplier) || 1;
+        let multiplier = parseFloat(expense.multiplier);
+        if (multiplier) {
+            multiplier = 1;
+        }
         const amount = parseFloat(expense.amount) || 0;
 
         let total;
@@ -481,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function removeInvestment(index) {
         investments.splice(index, 1);
         updateInvestmentsList();
-        updateInvestmentPercentageColors(); // Добавляем вызов здесь
+        updateInvestmentPercentageColors();
         updateTotalExpenses();
     }
 
@@ -492,33 +489,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 0);
 
         document.getElementById('investments-total').textContent = `Сумма: ${formatNumber(totalInvestments)} ₽`;
-    }
-
-    function updateSliderTicks(slider, datalistId) {
-        const datalist = document.getElementById(datalistId);
-        datalist.innerHTML = ''; // Очищаем существующие метки
-
-        const min = parseInt(slider.min);
-        const max = parseInt(slider.max);
-        const range = max - min;
-
-        if (range <= 0) return;
-
-        const step = Math.floor(range / 5 / 1000) * 1000;
-        if (step <= 0) return;
-
-        for (let i = min; i <= max; i += step) {
-            const option = document.createElement('option');
-            option.value = i;
-            datalist.appendChild(option);
-        }
-
-        // Убедимся, что максимальное значение включено
-        if (max % step !== 0) {
-            const option = document.createElement('option');
-            option.value = max;
-            datalist.appendChild(option);
-        }
     }
 
     function updateInvestmentName(event) {
@@ -546,23 +516,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Проверяем сумму процентов
         const totalDirectionPercentage = investments.reduce((sum, inv) => sum + (inv.percentage || 0), 0);
 
-        if (totalDirectionPercentage > 100) {
-            alert('Сумма процентов инвестиционных направлений не должна превышать 100%');
-            investments[index].percentage = 0;
-            event.target.value = '0%';
-        }
-
         localStorage.setItem('investments', JSON.stringify(investments));
         updateTotalExpenses();
         updateInvestmentAmountDisplay();
 
         // Вызываем функцию для обновления цвета полей ввода
         updateInvestmentPercentageColors();
+        updateInvestmentsList();
     }
 
     function updateInvestmentsList() {
         const investmentsList = document.getElementById('investments-list');
         investmentsList.innerHTML = '';
+
+        // Считаем общую сумму процентов в словаре investments
+        let percentSum = 0;
+        investments.forEach(inv => percentSum += inv.percentage || 0);
+
         investments.forEach((investment, index) => {
             const investmentItem = document.createElement('div');
             investmentItem.classList.add('investment-item');
@@ -577,9 +547,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const percentageInput = document.createElement('input');
             percentageInput.type = 'text';
             percentageInput.value = investment.percentage > 0 ? investment.percentage + '%' : '';
-            percentageInput.placeholder = '%';
+            percentageInput.placeholder = Math.floor(100 - percentSum) + '%';
             percentageInput.dataset.index = index;
             percentageInput.classList.add('investment-percentage-input');
+
+            if (percentSum > 100) {
+                percentageInput.classList.add('red');
+            } else if (percentSum < 100) {
+                percentageInput.classList.add('blue');
+            }
+
             percentageInput.addEventListener('input', onInvestmentPercentageInput);
             percentageInput.addEventListener('blur', formatInvestmentPercentageInput);
 
@@ -628,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addInvestment() {
         investments.push({ name: '', percentage: 0 });
         updateInvestmentsList();
-        updateInvestmentPercentageColors(); // Добавляем вызов здесь
+        updateInvestmentPercentageColors();
         updateTotalExpenses();
     }
 
@@ -652,7 +629,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function updateMinDailyAmountDisplay() {
-        document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * selectedDays))} ₽`;
+        const totalAmount = Math.floor(dailyMin * selectedDays);
+        document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(totalAmount)} ₽`;
     }
 
     function showSettingsSection() {
@@ -680,8 +658,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Выбор минимальных ежедневных расходов
         selectOption(dailyOptions, '1500');
-        document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
         dailyMin = 1500;
+        updateMinDailyAmountDisplay();
 
         // Сумма на "подушку"
         selectOption(cushionOptions, '10000');
@@ -690,22 +668,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Включаем оплату кредитных карт и устанавливаем значение
         includeCreditsCheckbox.checked = true;
         creditSettings.classList.remove('hidden');
-        creditCardCount = 1;
-        selectOption(creditCardOptions, '1');
-        creditAmountSlider.min = 11000;
-        creditAmountSlider.max = 100000;
-        creditAmountSlider.value = 20000;
-        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))}`;
+        creditAmountInput.value = formatNumber(20000) + ' ₽';
 
         // Включаем накопления и устанавливаем значение
         includeSavingsCheckbox.checked = true;
         savingsSettings.classList.remove('hidden');
-        savingsAmountSlider.min = 0;
-        savingsAmountSlider.max = 100000;
-        savingsAmountSlider.value = 50000;
-        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))}`;
+        savingsAmountInput.value = formatNumber(50000) + ' ₽';
 
-        adjustSliders();
+        adjustAmounts();
     }
 
     // Функция для включения/отключения оплат кредитов
@@ -714,9 +684,8 @@ document.addEventListener('DOMContentLoaded', function() {
             creditSettings.classList.remove('hidden');
         } else {
             creditSettings.classList.add('hidden');
-            creditAmountSlider.value = 0;
-            creditAmountDisplay.textContent = 'На оплату кредитных карт: 0 ₽';
-            adjustSliders();
+            creditAmountInput.value = '0 ₽';
+            adjustAmounts();
         }
     }
 
@@ -725,9 +694,8 @@ document.addEventListener('DOMContentLoaded', function() {
             savingsSettings.classList.remove('hidden');
         } else {
             savingsSettings.classList.add('hidden');
-            savingsAmountSlider.value = 0;
-            savingsAmountDisplay.textContent = 'Сумма на накопления: 0 ₽';
-            adjustSliders();
+            savingsAmountInput.value = '0 ₽';
+            adjustAmounts();
         }
     }
 
@@ -747,31 +715,33 @@ document.addEventListener('DOMContentLoaded', function() {
             selectOption(investmentOptions, btn.dataset.value);
             investmentPercentage = parseInt(btn.dataset.value);
             updateInvestmentAmountDisplay();
-            adjustSliders();
+            adjustAmounts();
             saveSettings();
             updateTotalExpenses(); // Обновление итоговой суммы расходов
         });
     }
 
+    // Обработчики для опций количества дней
     for (let btn of daysOptions) {
         btn.addEventListener('click', function() {
             selectOption(daysOptions, btn.dataset.value);
             selectedDays = parseInt(btn.dataset.value);
             updateMinDailyAmountDisplay();
-            adjustSliders();
+            adjustAmounts();
             saveSettings();
             updateTotalExpenses();
         });
     }
 
+    // Обработчики для опций минимальных ежедневных расходов
     for (let btn of dailyOptions) {
         btn.addEventListener('click', function() {
             selectOption(dailyOptions, btn.dataset.value);
             dailyMin = parseInt(btn.dataset.value);
-            document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
-            adjustSliders();
+            updateMinDailyAmountDisplay();
+            adjustAmounts();
             saveSettings();
-            updateTotalExpenses(); // Обновление итоговой суммы расходов
+            updateTotalExpenses();
         });
     }
 
@@ -779,20 +749,9 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             selectOption(cushionOptions, btn.dataset.value);
             cushionAmount = parseInt(btn.dataset.value);
-            adjustSliders();
+            adjustAmounts();
             saveSettings();
             updateTotalExpenses();
-        });
-    }
-
-    // Для кредитных карт
-    for (let btn of creditCardOptions) {
-        btn.addEventListener('click', function() {
-            selectOption(creditCardOptions, btn.dataset.value);
-            creditCardCount = parseInt(btn.dataset.value);
-            adjustSliders();
-            saveSettings();
-            updateTotalExpenses(); // Обновление итоговой суммы расходов
         });
     }
 
@@ -800,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
     includeCreditsCheckbox.addEventListener('change', function() {
         changeCheckBoxCredit();
         updateTotalExpenses();
-        adjustSliders();
+        adjustAmounts();
         saveSettings();
     });
 
@@ -808,39 +767,77 @@ document.addEventListener('DOMContentLoaded', function() {
     includeSavingsCheckbox.addEventListener('change', function() {
         changeCheckBoxSaving();
         updateTotalExpenses();
-        adjustSliders();
+        adjustAmounts();
         saveSettings();
     });
 
-    // Для слайдеров
-    creditAmountSlider.addEventListener('input', function() {
-        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
-        updateTotalExpenses();
-        adjustSliders();
-        saveSettings();
+    // Обработчики для кнопок изменения суммы кредитов
+    creditIncreaseBtn.addEventListener('click', function() {
+        changeCreditAmount(1000);
+        adjustAmounts();
     });
 
-    savingsAmountSlider.addEventListener('input', function() {
-        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
-        updateTotalExpenses();
-        adjustSliders();
-        saveSettings();
+    creditDecreaseBtn.addEventListener('click', function() {
+        changeCreditAmount(-1000);
+        adjustAmounts();
     });
 
-    // Для кнопок Max
     creditMaxBtn.addEventListener('click', function() {
-        creditAmountSlider.value = creditAmountSlider.max;
-        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
-        updateTotalExpenses();
-        saveSettings();
+        setCreditAmountToMax();
+        adjustAmounts();
+    });
+
+    // Обработчики для кнопок изменения суммы накоплений
+    savingsIncreaseBtn.addEventListener('click', function() {
+        changeSavingsAmount(1000);
+        adjustAmounts();
+    });
+
+    savingsDecreaseBtn.addEventListener('click', function() {
+        changeSavingsAmount(-1000);
+        adjustAmounts();
     });
 
     savingsMaxBtn.addEventListener('click', function() {
-        savingsAmountSlider.value = savingsAmountSlider.max;
-        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
-        updateTotalExpenses();
-        saveSettings();
+        setSavingsAmountToMax();
+        adjustAmounts();
     });
+
+    function changeCreditAmount(delta) {
+        let amount = parseInt(creditAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        amount += delta;
+        if (amount < 0) amount = 0;
+        const maxAmount = calculateMaxCreditAmount();
+        if (amount > maxAmount) amount = maxAmount;
+        creditAmountInput.value = formatNumber(amount) + ' ₽';
+        saveSettings();
+        updateTotalExpenses();
+    }
+
+    function setCreditAmountToMax() {
+        const maxAmount = calculateMaxCreditAmount();
+        creditAmountInput.value = formatNumber(maxAmount) + ' ₽';
+        saveSettings();
+        updateTotalExpenses();
+    }
+
+    function changeSavingsAmount(delta) {
+        let amount = parseInt(savingsAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        amount += delta;
+        if (amount < 0) amount = 0;
+        const maxAmount = calculateMaxSavingsAmount();
+        if (amount > maxAmount) amount = maxAmount;
+        savingsAmountInput.value = formatNumber(amount) + ' ₽';
+        saveSettings();
+        updateTotalExpenses();
+    }
+
+    function setSavingsAmountToMax() {
+        const maxAmount = calculateMaxSavingsAmount();
+        savingsAmountInput.value = formatNumber(maxAmount) + ' ₽';
+        saveSettings();
+        updateTotalExpenses();
+    }
 
     // Функция для расчёта доступных средств
     function calculateAvailableFunds() {
@@ -859,7 +856,7 @@ document.addEventListener('DOMContentLoaded', function() {
         remainingAmount -= totalInvestments;
 
         // Минимальные ежедневные расходы
-        const requiredLivingExpenses = dailyMin * 30;
+        const requiredLivingExpenses = dailyMin * selectedDays;
         remainingAmount -= requiredLivingExpenses;
 
         return remainingAmount;
@@ -867,67 +864,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция для расчёта максимальной суммы на кредитные карты
     function calculateMaxCreditAmount() {
-        const maxAvailable = calculateAvailableFunds() - parseInt(savingsAmountSlider.value || 0, 10);
-        return Math.max(11000, Math.floor(maxAvailable / 1000) * 1000);
+        const savingsAmount = parseInt(savingsAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        const maxAvailable = calculateAvailableFunds() - savingsAmount;
+        return Math.max(0, Math.floor(maxAvailable / 1000) * 1000);
     }
 
     // Функция для расчёта максимальной суммы на накопления
     function calculateMaxSavingsAmount() {
-        const maxAvailable = calculateAvailableFunds() - parseInt(creditAmountSlider.value || 0, 10);
+        const creditAmount = parseInt(creditAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        const maxAvailable = calculateAvailableFunds() - creditAmount;
         return Math.max(0, Math.floor(maxAvailable / 1000) * 1000);
     }
 
-    // Функция для корректировки слайдеров
-    function adjustSliders() {
-        const totalData = calculateTotal();
-
-        // Общий доход
-        const totalIncome = totalData.in.salary + totalData.in.previousBalance;
-
-        // Общая сумма минимальных расходов на проживание
-        const totalLiveAmount = totalData.estAmountTotal;
-
+    // Функция для корректировки сумм
+    function adjustAmounts() {
         // Для кредитных карт
-        let maxCreditAmount = totalIncome - totalData.out.cushion - totalData.out.investments - totalData.out.mandatoryExpenses - totalData.out.savings - totalLiveAmount;
-        maxCreditAmount = Math.max(0, Math.floor(maxCreditAmount / 1000) * 1000);
-
-        creditAmountSlider.max = maxCreditAmount;
-        creditAmountSlider.min = 0;
-        creditAmountSlider.step = 1000;
-
-        // Обновляем текст кнопки MAX
+        let maxCreditAmount = calculateMaxCreditAmount();
         creditMaxBtn.textContent = `MAX ${formatNumber(maxCreditAmount)} ₽`;
 
-        if (parseInt(creditAmountSlider.value, 10) > maxCreditAmount) {
-            creditAmountSlider.value = maxCreditAmount;
+        let currentCreditAmount = parseInt(creditAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        if (currentCreditAmount > maxCreditAmount) {
+            currentCreditAmount = maxCreditAmount;
+            creditAmountInput.value = formatNumber(currentCreditAmount) + ' ₽';
         }
-
-        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value, 10))} ₽`;
 
         // Для накоплений
-        let maxSavingsAmount = totalIncome - totalData.out.creditPayments - totalData.out.investments - totalData.out.mandatoryExpenses - totalData.out.savings - totalLiveAmount;
-        maxSavingsAmount = Math.max(0, Math.floor(maxSavingsAmount / 1000) * 1000);
-
-        savingsAmountSlider.max = maxSavingsAmount;
-        savingsAmountSlider.min = 0;
-        savingsAmountSlider.step = 1000;
-
-        // Обновляем текст кнопки MAX
+        let maxSavingsAmount = calculateMaxSavingsAmount();
         savingsMaxBtn.textContent = `MAX ${formatNumber(maxSavingsAmount)} ₽`;
 
-        if (parseInt(savingsAmountSlider.value, 10) > maxSavingsAmount) {
-            savingsAmountSlider.value = maxSavingsAmount;
+        let currentSavingsAmount = parseInt(savingsAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+        if (currentSavingsAmount > maxSavingsAmount) {
+            currentSavingsAmount = maxSavingsAmount;
+            savingsAmountInput.value = formatNumber(currentSavingsAmount) + ' ₽';
         }
 
-        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value, 10))} ₽`;
-
-        // Обновляем метки на слайдере кредитных карт
-        updateSliderTicks(creditAmountSlider, 'credit-ticks');
-
-        // Обновляем метки на слайдере накоплений
-        updateSliderTicks(savingsAmountSlider, 'savings-ticks');
-
-        // Сохраняем настройки
         saveSettings();
     }
 
@@ -935,21 +905,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Сохраняем настройки в localStorage
         const settings = {
             includeCredits: includeCreditsCheckbox.checked,
-            creditAmount: creditAmountSlider.value,
+            creditAmount: parseInt(creditAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0,
             includeSavings: includeSavingsCheckbox.checked,
-            savingsAmount: savingsAmountSlider.value,
+            savingsAmount: parseInt(savingsAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0,
             investmentPercentage: investmentPercentage,
             dailyMin: dailyMin,
             cushionAmount: cushionAmount,
             salary: parseInt(salaryInput.value.replace(/\s/g, ''), 10) || 0,
             previousBalance: parseInt(previousBalanceInput.value.replace(/\s/g, ''), 10) || 0,
-            creditCardCount: creditCardCount
+            selectedDays: selectedDays
         };
         localStorage.setItem('budgetSettings', JSON.stringify(settings));
         localStorage.setItem('investments', JSON.stringify(investments));
-
-        settings.selectedDays = selectedDays;
-        localStorage.setItem('budgetSettings', JSON.stringify(settings));
     }
 
     // Обновление отображения суммы инвестиций
@@ -963,13 +930,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadSettings() {
         const settings = JSON.parse(localStorage.getItem('budgetSettings'));
         if (settings) {
+            selectedDays = settings.selectedDays;
+
             includeCreditsCheckbox.checked = settings.includeCredits;
-            creditAmountSlider.value = settings.creditAmount;
-            creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(settings.creditAmount, 10))} ₽`;
+            creditAmountInput.value = formatAmount(parseInt(settings.creditAmount, 10) || 0);
 
             includeSavingsCheckbox.checked = settings.includeSavings;
-            savingsAmountSlider.value = settings.savingsAmount;
-            savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(settings.savingsAmount, 10))} ₽`;
+            savingsAmountInput.value = formatAmount(parseInt(settings.savingsAmount, 10) || 0);
 
             selectOption(investmentOptions, settings.investmentPercentage.toString());
             investmentPercentage = settings.investmentPercentage;
@@ -977,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             selectOption(dailyOptions, settings.dailyMin.toString());
             dailyMin = settings.dailyMin;
-            document.getElementById('min-daily-amount').textContent = `Сумма: ${formatNumber(Math.floor(dailyMin * 30))} ₽`;
+            updateMinDailyAmountDisplay();
 
             cushionAmount = settings.cushionAmount;
             selectOption(cushionOptions, cushionAmount.toString());
@@ -985,14 +952,11 @@ document.addEventListener('DOMContentLoaded', function() {
             salaryInput.value = formatNumber(settings.salary) + ' ₽';
             previousBalanceInput.value = formatNumber(settings.previousBalance) + ' ₽';
 
-            selectOption(creditCardOptions, settings.creditCardCount.toString());
-            creditCardCount = settings.creditCardCount;
-
             // Загрузка обязательных трат с множителями
             mandatoryExpenses = JSON.parse(localStorage.getItem('mandatoryExpenses')) || [];
             updateMandatoryExpensesList();
 
-            adjustSliders();
+            adjustAmounts();
 
             if (settings.salary + settings.previousBalance > 10000) {
                 settingsSection.classList.remove('hidden');
@@ -1005,6 +969,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!settings.includeSavings) {
                 savingsSettings.classList.add('hidden');
             }
+
         }
 
         changeCheckBoxSaving();
@@ -1017,15 +982,16 @@ document.addEventListener('DOMContentLoaded', function() {
         updateInvestmentsList();
         updateInvestmentPercentageColors();
 
-        selectedDays = settings.selectedDays || 30;
+        selectedDays = settings ? settings.selectedDays : 30;
         selectOption(daysOptions, selectedDays.toString());
         updateMinDailyAmountDisplay();
+
+        adjustAmounts();
+
+        saveSettings();
     }
 
     // Форматирование чисел при вводе для зарплаты и остатка
-    const salaryInputField = document.getElementById('salary-input');
-    const previousBalanceInputField = document.getElementById('previous-balance-input');
-
     function formatInputNumber(event) {
         const input = event.target;
         let value = input.value.replace(/\D/g, '');
@@ -1037,8 +1003,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    salaryInputField.addEventListener('input', formatInputNumber);
-    previousBalanceInputField.addEventListener('input', formatInputNumber);
+    salaryInput.addEventListener('input', formatInputNumber);
+    previousBalanceInput.addEventListener('input', formatInputNumber);
 
     function calculateTotal() {
         const totalIncome = getTotalIncome();
@@ -1059,11 +1025,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalCushion = cushionAmount;
 
         // Кредитные карты
-        const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
-        const creditCardCountValue = includeCreditsCheckbox.checked ? creditCardCount : 0;
+        const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0 : 0;
 
         // Накопления
-        const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
+        const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountInput.value.replace(/[^0-9]/g, ''), 10) || 0 : 0;
 
         // Минимальные ежедневные расходы
         const minAmountDaily = dailyMin;
@@ -1075,7 +1040,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // actAmountTotal
         const actAmountTotal = previousBalance + salary - actPlanExpensesTotal;
-//        console.log(actAmountTotal);
 
         return {
             in: {
@@ -1087,7 +1051,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 investments: totalInvestmentAmount,
                 cushion: totalCushion,
                 creditPayments: creditAmount,
-                creditCardCount: creditCardCountValue,
                 savings: savingsAmount,
                 actPlanExpensesTotal: actPlanExpensesTotal
             },
@@ -1099,5 +1062,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadSettings();
-    console.log(JSON.stringify(calculateTotal()));
 });

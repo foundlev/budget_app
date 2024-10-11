@@ -85,14 +85,14 @@
                     <button data-value="20" class="option-button">20%</button>
                     <button data-value="25" class="option-button">25%</button>
                 </div>
+                <div id="investments-section">
+                    <div id="investments-list">
+                        <!-- Список инвестиционных направлений -->
+                    </div>
+                    <button id="add-investment-btn"><i class="fas fa-plus"></i> Добавить инвестицию</button>
+                </div>
                 <!-- Сумма инвестиций -->
                 <div id="investment-total">Инвестиции: 0 ₽</div>
-            </div>
-            <div id="investments-section">
-                <div id="investments-list">
-                    <!-- Список инвестиционных направлений -->
-                </div>
-                <button id="add-investment-btn"><i class="fas fa-plus"></i> Добавить инвестицию</button>
             </div>
             <!-- Сумма на "подушку" -->
             <div class="setting-item">
@@ -115,19 +115,11 @@
             <div class="setting-item">
                 <label><input type="checkbox" id="include-credits"> Оплата кредитных карт</label>
                 <div id="credit-settings" class="hidden">
-                    <label class="label-margin">Количество кредитных карт:</label>
-                    <div class="options" id="credit-card-options">
-                        <button data-value="1" class="option-button">1</button>
-                        <button data-value="2" class="option-button">2</button>
-                        <button data-value="3" class="option-button">3</button>
-                    </div>
-                    <label id="credit-amount-display">На оплату кредитных карт:</label>
-                    <div class="slider-container">
-                        <input type="range" id="credit-amount-slider" min="11000" max="100000" step="1000" value="20000" list="credit-ticks">
-                        <datalist id="credit-ticks">
-                            <!-- Метки будут генерироваться динамически -->
-                        </datalist>
-                        <button id="credit-max-btn" class="max-button">MAX 100 000 ₽</button>
+                    <div class="amount-control">
+                        <button id="credit-decrease-btn" class="change-amount-button">-</button>
+                        <input type="text" id="credit-amount-input" value="0 ₽" readonly>
+                        <button id="credit-increase-btn" class="change-amount-button">+</button>
+                        <button id="credit-max-btn" class="max-button">MAX 0 ₽</button>
                     </div>
                 </div>
             </div>
@@ -135,13 +127,11 @@
             <div class="setting-item">
                 <label><input type="checkbox" id="include-savings"> Накопления на покупку квартиры</label>
                 <div id="savings-settings" class="hidden">
-                    <label class="label-margin" id="savings-amount-display">Сумма на накопления:</label>
-                    <div class="slider-container">
-                        <input type="range" id="savings-amount-slider" min="0" max="100000" step="1000" value="50000" list="savings-ticks">
-                        <datalist id="savings-ticks">
-                            <!-- Метки будут генерироваться динамически -->
-                        </datalist>
-                        <button id="savings-max-btn" class="max-button">MAX 100 000 ₽</button>
+                    <div class="amount-control">
+                        <button id="savings-decrease-btn" class="change-amount-button">-</button>
+                        <input type="text" id="savings-amount-input" value="0 ₽" readonly>
+                        <button id="savings-increase-btn" class="change-amount-button">+</button>
+                        <button id="savings-max-btn" class="max-button">MAX 0 ₽</button>
                     </div>
                 </div>
             </div>
