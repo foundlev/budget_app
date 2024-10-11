@@ -439,43 +439,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обновление функции updateTotalExpenses
     function updateTotalExpenses() {
-        const totalIncome = getTotalIncome();
+        const totalData = calculateTotal();
 
-        // Сумма обязательных трат
-        const totalMandatoryExpenses = mandatoryExpenses.reduce((sum, expense) => {
-            return sum + calculateExpenseTotal(expense);
-        }, 0);
-
-        // Сумма инвестиций
-        const totalInvestmentAmount = Math.floor(totalIncome * (investmentPercentage / 100));
-
-        // Остальные расчёты
-        const creditAmount = includeCreditsCheckbox.checked ? parseInt(creditAmountSlider.value, 10) : 0;
-        const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
-        const totalCushion = cushionAmount;
-        const minLivingExpenses = dailyMin * selectedDays;
-
-        const totalExpenses = totalMandatoryExpenses + totalInvestmentAmount + creditAmount + savingsAmount + totalCushion + minLivingExpenses;
-        const remainingAmount = Math.floor(totalIncome - totalExpenses);
-
-        totalExpensesValue.textContent = `Итого: ${formatNumber(totalExpenses)} ₽`;
+        // Обновляем отображение общей суммы расходов
+        totalExpensesValue.textContent = `Итого: ${formatNumber(totalData.out.actPlanExpensesTotal)} ₽`;
 
         // Рассчитываем остаток на проживание
-        const remainingLivingExpenses = remainingAmount >= 0 ? remainingAmount : 0;
-        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / selectedDays) : 0;
+        const remainingLivingExpenses = totalData.actAmountTotal;
+        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / totalData.days) : 0;
 
         const remainingLivingExpensesValue = document.getElementById('remaining-living-expenses-value');
         remainingLivingExpensesValue.textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
 
         // Добавляем проверку
-        if (perDay < dailyMin) {
+        if (perDay < totalData.minAmountDaily) {
             remainingLivingExpensesValue.classList.add('warning-text');
         } else {
             remainingLivingExpensesValue.classList.remove('warning-text');
         }
 
         // Обновляем отображение общей суммы обязательных трат
-        document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalMandatoryExpenses)} ₽`;
+        document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalData.out.mandatoryExpenses)} ₽`;
     }
 
     // Новые элементы для отображения итогов
@@ -497,6 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function removeInvestment(index) {
         investments.splice(index, 1);
         updateInvestmentsList();
+        updateInvestmentPercentageColors(); // Добавляем вызов здесь
         updateTotalExpenses();
     }
 
@@ -507,6 +492,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 0);
 
         document.getElementById('investments-total').textContent = `Сумма: ${formatNumber(totalInvestments)} ₽`;
+    }
+
+    function updateSliderTicks(slider, datalistId) {
+        const datalist = document.getElementById(datalistId);
+        datalist.innerHTML = ''; // Очищаем существующие метки
+
+        const min = parseInt(slider.min);
+        const max = parseInt(slider.max);
+        const range = max - min;
+
+        if (range <= 0) return;
+
+        const step = Math.floor(range / 5 / 1000) * 1000;
+        if (step <= 0) return;
+
+        for (let i = min; i <= max; i += step) {
+            const option = document.createElement('option');
+            option.value = i;
+            datalist.appendChild(option);
+        }
+
+        // Убедимся, что максимальное значение включено
+        if (max % step !== 0) {
+            const option = document.createElement('option');
+            option.value = max;
+            datalist.appendChild(option);
+        }
     }
 
     function updateInvestmentName(event) {
@@ -533,6 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Проверяем сумму процентов
         const totalDirectionPercentage = investments.reduce((sum, inv) => sum + (inv.percentage || 0), 0);
+
         if (totalDirectionPercentage > 100) {
             alert('Сумма процентов инвестиционных направлений не должна превышать 100%');
             investments[index].percentage = 0;
@@ -540,8 +553,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         localStorage.setItem('investments', JSON.stringify(investments));
-        updateInvestmentsList();
         updateTotalExpenses();
+        updateInvestmentAmountDisplay();
+
+        // Вызываем функцию для обновления цвета полей ввода
+        updateInvestmentPercentageColors();
     }
 
     function updateInvestmentsList() {
@@ -563,6 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
             percentageInput.value = investment.percentage > 0 ? investment.percentage + '%' : '';
             percentageInput.placeholder = '%';
             percentageInput.dataset.index = index;
+            percentageInput.classList.add('investment-percentage-input');
             percentageInput.addEventListener('input', onInvestmentPercentageInput);
             percentageInput.addEventListener('blur', formatInvestmentPercentageInput);
 
@@ -592,9 +609,26 @@ document.addEventListener('DOMContentLoaded', function() {
         updateInvestmentAmountDisplay();
     }
 
+    function updateInvestmentPercentageColors() {
+        const totalPercentage = investments.reduce((sum, inv) => sum + (inv.percentage || 0), 0);
+        investments.forEach((investment, index) => {
+            const percentageInput = document.querySelector(`.investment-percentage-input[data-index="${index}"]`);
+            if (!percentageInput) return;
+
+            percentageInput.classList.remove('red', 'blue');
+
+            if (totalPercentage < 100) {
+                percentageInput.classList.add('blue');
+            } else if (totalPercentage > 100) {
+                percentageInput.classList.add('red');
+            }
+        });
+    }
+
     function addInvestment() {
         investments.push({ name: '', percentage: 0 });
         updateInvestmentsList();
+        updateInvestmentPercentageColors(); // Добавляем вызов здесь
         updateTotalExpenses();
     }
 
@@ -747,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cushionAmount = parseInt(btn.dataset.value);
             adjustSliders();
             saveSettings();
-            updateTotalExpenses(); // Обновление итоговой суммы расходов
+            updateTotalExpenses();
         });
     }
 
@@ -756,6 +790,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             selectOption(creditCardOptions, btn.dataset.value);
             creditCardCount = parseInt(btn.dataset.value);
+            adjustSliders();
             saveSettings();
             updateTotalExpenses(); // Обновление итоговой суммы расходов
         });
@@ -765,6 +800,7 @@ document.addEventListener('DOMContentLoaded', function() {
     includeCreditsCheckbox.addEventListener('change', function() {
         changeCheckBoxCredit();
         updateTotalExpenses();
+        adjustSliders();
         saveSettings();
     });
 
@@ -772,39 +808,38 @@ document.addEventListener('DOMContentLoaded', function() {
     includeSavingsCheckbox.addEventListener('change', function() {
         changeCheckBoxSaving();
         updateTotalExpenses();
+        adjustSliders();
         saveSettings();
     });
 
     // Для слайдеров
     creditAmountSlider.addEventListener('input', function() {
         creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
+        updateTotalExpenses();
         adjustSliders();
         saveSettings();
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
     });
 
     savingsAmountSlider.addEventListener('input', function() {
         savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
+        updateTotalExpenses();
         adjustSliders();
         saveSettings();
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
     });
 
     // Для кнопок Max
     creditMaxBtn.addEventListener('click', function() {
-        creditAmountSlider.value = calculateMaxCreditAmount();
+        creditAmountSlider.value = creditAmountSlider.max;
         creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value))} ₽`;
-        adjustSliders();
+        updateTotalExpenses();
         saveSettings();
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
     });
 
     savingsMaxBtn.addEventListener('click', function() {
-        savingsAmountSlider.value = calculateMaxSavingsAmount();
+        savingsAmountSlider.value = savingsAmountSlider.max;
         savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value))} ₽`;
-        adjustSliders();
+        updateTotalExpenses();
         saveSettings();
-        updateTotalExpenses(); // Обновление итоговой суммы расходов
     });
 
     // Функция для расчёта доступных средств
@@ -844,22 +879,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция для корректировки слайдеров
     function adjustSliders() {
-        const availableFunds = calculateAvailableFunds();
+        const totalData = calculateTotal();
 
-        // Ограничиваем суммы на слайдерах
-        const maxCreditAmount = calculateMaxCreditAmount();
+        // Общий доход
+        const totalIncome = totalData.in.salary + totalData.in.previousBalance;
+
+        // Общая сумма минимальных расходов на проживание
+        const totalLiveAmount = totalData.estAmountTotal;
+
+        // Для кредитных карт
+        let maxCreditAmount = totalIncome - totalData.out.cushion - totalData.out.investments - totalData.out.mandatoryExpenses - totalData.out.savings - totalLiveAmount;
+        maxCreditAmount = Math.max(0, Math.floor(maxCreditAmount / 1000) * 1000);
+
         creditAmountSlider.max = maxCreditAmount;
+        creditAmountSlider.min = 0;
+        creditAmountSlider.step = 1000;
+
+        // Обновляем текст кнопки MAX
+        creditMaxBtn.textContent = `MAX ${formatNumber(maxCreditAmount)} ₽`;
+
         if (parseInt(creditAmountSlider.value, 10) > maxCreditAmount) {
             creditAmountSlider.value = maxCreditAmount;
-            creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(maxCreditAmount)} ₽`;
         }
 
-        const maxSavingsAmount = calculateMaxSavingsAmount();
+        creditAmountDisplay.textContent = `На оплату кредитных карт: ${formatNumber(parseInt(creditAmountSlider.value, 10))} ₽`;
+
+        // Для накоплений
+        let maxSavingsAmount = totalIncome - totalData.out.creditPayments - totalData.out.investments - totalData.out.mandatoryExpenses - totalData.out.savings - totalLiveAmount;
+        maxSavingsAmount = Math.max(0, Math.floor(maxSavingsAmount / 1000) * 1000);
+
         savingsAmountSlider.max = maxSavingsAmount;
+        savingsAmountSlider.min = 0;
+        savingsAmountSlider.step = 1000;
+
+        // Обновляем текст кнопки MAX
+        savingsMaxBtn.textContent = `MAX ${formatNumber(maxSavingsAmount)} ₽`;
+
         if (parseInt(savingsAmountSlider.value, 10) > maxSavingsAmount) {
             savingsAmountSlider.value = maxSavingsAmount;
-            savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(maxSavingsAmount)} ₽`;
         }
+
+        savingsAmountDisplay.textContent = `Сумма на накопления: ${formatNumber(parseInt(savingsAmountSlider.value, 10))} ₽`;
+
+        // Обновляем метки на слайдере кредитных карт
+        updateSliderTicks(creditAmountSlider, 'credit-ticks');
+
+        // Обновляем метки на слайдере накоплений
+        updateSliderTicks(savingsAmountSlider, 'savings-ticks');
+
+        // Сохраняем настройки
+        saveSettings();
     }
 
     function saveSettings () {
@@ -946,6 +1015,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         investments = JSON.parse(localStorage.getItem('investments')) || [];
         updateInvestmentsList();
+        updateInvestmentPercentageColors();
 
         selectedDays = settings.selectedDays || 30;
         selectOption(daysOptions, selectedDays.toString());
@@ -995,6 +1065,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Накопления
         const savingsAmount = includeSavingsCheckbox.checked ? parseInt(savingsAmountSlider.value, 10) : 0;
 
+        // Минимальные ежедневные расходы
+        const minAmountDaily = dailyMin;
+        const days = selectedDays;
+        const estAmountTotal = Math.round(minAmountDaily * days);
+
+        // actPlanExpensesTotal
+        const actPlanExpensesTotal = creditAmount + totalCushion + totalInvestmentAmount + savingsAmount + totalMandatoryExpenses;
+
+        // actAmountTotal
+        const actAmountTotal = previousBalance + salary - actPlanExpensesTotal;
+//        console.log(actAmountTotal);
+
         return {
             in: {
                 salary: salary,
@@ -1006,11 +1088,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 cushion: totalCushion,
                 creditPayments: creditAmount,
                 creditCardCount: creditCardCountValue,
-                savings: savingsAmount
-            }
+                savings: savingsAmount,
+                actPlanExpensesTotal: actPlanExpensesTotal
+            },
+            minAmountDaily: minAmountDaily,
+            days: days,
+            estAmountTotal: estAmountTotal,
+            actAmountTotal: actAmountTotal
         };
     }
 
     loadSettings();
-    console.log(calculateTotal());
+    console.log(JSON.stringify(calculateTotal()));
 });

@@ -554,3 +554,11 @@ input[type="checkbox"]:checked::before {
     font-size: 24px;
     cursor: pointer;
 }
+
+.investment-percentage-input.blue {
+    border-color: #1E90FF; /* Синий цвет */
+}
+
+.investment-percentage-input.red {
+    border-color: #FF4500; /* Красный цвет */
+}

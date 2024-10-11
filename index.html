@@ -123,8 +123,11 @@
                     </div>
                     <label id="credit-amount-display">На оплату кредитных карт:</label>
                     <div class="slider-container">
-                        <input type="range" id="credit-amount-slider" min="11000" max="100000" step="1000" value="20000">
-                        <button id="credit-max-btn" class="max-button">Max</button>
+                        <input type="range" id="credit-amount-slider" min="11000" max="100000" step="1000" value="20000" list="credit-ticks">
+                        <datalist id="credit-ticks">
+                            <!-- Метки будут генерироваться динамически -->
+                        </datalist>
+                        <button id="credit-max-btn" class="max-button">MAX 100 000 ₽</button>
                     </div>
                 </div>
             </div>
@@ -134,8 +137,11 @@
                 <div id="savings-settings" class="hidden">
                     <label class="label-margin" id="savings-amount-display">Сумма на накопления:</label>
                     <div class="slider-container">
-                        <input type="range" id="savings-amount-slider" min="0" max="100000" step="1000" value="50000">
-                        <button id="savings-max-btn" class="max-button">Max</button>
+                        <input type="range" id="savings-amount-slider" min="0" max="100000" step="1000" value="50000" list="savings-ticks">
+                        <datalist id="savings-ticks">
+                            <!-- Метки будут генерироваться динамически -->
+                        </datalist>
+                        <button id="savings-max-btn" class="max-button">MAX 100 000 ₽</button>
                     </div>
                 </div>
             </div>
