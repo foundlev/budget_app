@@ -599,3 +599,93 @@ input[type="checkbox"]:checked::before {
     color: var(--text-color);
 }
 
+/* Стили для блока итогов */
+.total-item input[type="number"] {
+    text-align: right;
+}
+
+/* Стили для выпадающего списка */
+.styled-select {
+    appearance: none;
+    background-color: var(--surface-color);
+    border: 1px solid var(--primary-color);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    color: var(--text-color);
+    width: 100%;
+    max-width: 150px;
+    margin-left: 10px;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23' + encodeURIComponent(var(--primary-color)) + '" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path d="M2 0L0 2h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px;
+    flex: 2;
+}
+
+.styled-select:focus {
+    outline: none;
+    border-color: var(--primary-color-light);
+}
+
+/* Стили для блока итогов */
+#totals-section {
+    background-color: var(--surface-color);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.total-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.total-item:last-child {
+    border-bottom: none;
+}
+
+.total-item label {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.total-item input[type="text"],
+.total-item select {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    width: 100%;
+    max-width: 200px;
+    margin-left: 10px;
+    text-align: right;
+}
+
+.total-item span {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.total-item input[type="text"]::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.per-card-amount {
+    text-align: right;
+    display: block;
+    flex: 2;
+}
+
+.label-flex {
+    flex: 6;
+}

@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let dailyMin = 1500;
     let cushionAmount = 10000;
     let selectedDays = 30;
+    let creditCardCount = 1;
 
     // Отображение блоков настроек при загрузке
     if (includeCreditsCheckbox.checked) {
@@ -416,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для расчета итоговой стоимости траты
     function calculateExpenseTotal(expense) {
         let multiplier = parseFloat(expense.multiplier);
-        if (multiplier) {
+        if (isNaN(multiplier)) {
             multiplier = 1;
         }
         const amount = parseFloat(expense.amount) || 0;
@@ -457,6 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Обновляем отображение общей суммы обязательных трат
         document.getElementById('mandatory-expenses-total').textContent = `Сумма: ${formatNumber(totalData.out.mandatoryExpenses)} ₽`;
+        updateTotalsSection();
     }
 
     // Новые элементы для отображения итогов
@@ -1059,6 +1061,169 @@ document.addEventListener('DOMContentLoaded', function() {
             estAmountTotal: estAmountTotal,
             actAmountTotal: actAmountTotal
         };
+    }
+
+    function updateTotalsSection() {
+        const totalsSection = document.getElementById('totals-section');
+        totalsSection.innerHTML = ''; // Очищаем содержимое
+
+        const totalData = calculateTotal();
+
+        // Переменные для удобства
+        const creditAmount = totalData.out.creditPayments;
+        const savingsAmount = totalData.out.savings;
+        const cushionAmount = totalData.out.cushion;
+        const mandatoryExpenses = totalData.out.mandatoryExpenses;
+        const investmentAmount = totalData.out.investments;
+        const remainingLivingExpenses = totalData.actAmountTotal;
+        const perDay = remainingLivingExpenses >= 0 ? Math.floor(remainingLivingExpenses / totalData.days) : 0;
+
+        // 1. Оплата кредитных карт
+        if (creditAmount > 0) {
+
+            const creditItem = document.createElement('div');
+            creditItem.classList.add('total-item');
+
+            const label = document.createElement('label');
+            label.textContent = `Оплата кредитных карт: ${formatAmount(creditAmount)}`;
+            label.classList.add('label-flex');
+
+            const select = document.createElement('select');
+            select.classList.add('styled-select');
+
+            for (let i = 1; i <= 4; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i} карт(ы)`;
+                select.appendChild(option);
+            }
+
+            // Устанавливаем у выпадающего списка значение из текущих настроек
+            select.value = creditCardCount;
+
+            select.addEventListener('change', function() {
+                creditCardCount = parseInt(this.value);
+                updateTotalsSection();
+            });
+
+            const perCardAmount = Math.floor(creditAmount / creditCardCount);
+            const amountSpan = document.createElement('span');
+            amountSpan.classList.add('per-card-amount');
+            amountSpan.textContent = `по ${formatAmount(perCardAmount)}`;
+
+            creditItem.appendChild(label);
+            creditItem.appendChild(select);
+            creditItem.appendChild(amountSpan);
+
+            totalsSection.appendChild(creditItem);
+        }
+
+        // 2. Накопления на покупку квартиры
+        if (savingsAmount > 0) {
+            const savingsItem = document.createElement('div');
+            savingsItem.classList.add('total-item');
+
+            const label = document.createElement('label');
+            label.textContent = 'Отложить на квартиру:';
+
+            const amountSpan = document.createElement('span');
+            amountSpan.textContent = `${formatNumber(savingsAmount)} ₽`;
+
+            savingsItem.appendChild(label);
+            savingsItem.appendChild(amountSpan);
+
+            totalsSection.appendChild(savingsItem);
+        }
+
+        // 3. Подушка безопасности
+        if (cushionAmount > 0) {
+            const cushionItem = document.createElement('div');
+            cushionItem.classList.add('total-item');
+
+            const label = document.createElement('label');
+            label.textContent = 'Отложить на подушку:';
+
+            const amountSpan = document.createElement('span');
+            amountSpan.textContent = `${formatNumber(cushionAmount)} ₽`;
+
+            cushionItem.appendChild(label);
+            cushionItem.appendChild(amountSpan);
+
+            totalsSection.appendChild(cushionItem);
+        }
+
+        // 4. Обязательные траты
+        if (mandatoryExpenses > 0) {
+            const mandatoryItem = document.createElement('div');
+            mandatoryItem.classList.add('total-item');
+
+            const label = document.createElement('label');
+            label.textContent = 'Обязательные траты:';
+
+            const amountSpan = document.createElement('span');
+            amountSpan.textContent = `${formatNumber(mandatoryExpenses)} ₽`;
+
+            mandatoryItem.appendChild(label);
+            mandatoryItem.appendChild(amountSpan);
+
+            totalsSection.appendChild(mandatoryItem);
+        }
+
+        // 5. Инвестиции
+        if (investmentAmount > 0 || investments.length > 0) {
+            const investmentItem = document.createElement('div');
+            investmentItem.classList.add('total-item');
+
+            const label = document.createElement('label');
+            label.textContent = 'Инвестиции:';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.addEventListener('input', function(event) {
+                let value = event.target.value.replace(/[^0-9]/g, '');
+                event.target.value = formatNumberInput(value);
+                investmentAmount = parseInt(value) || 0;
+                updateTotalsSection();
+            });
+
+            investmentItem.appendChild(label);
+            investmentItem.appendChild(input);
+
+            totalsSection.appendChild(investmentItem);
+
+            // Распределение между направлениями
+            investments.forEach((inv) => {
+                const invItem = document.createElement('div');
+                invItem.classList.add('total-item');
+
+                const invLabel = document.createElement('label');
+                invLabel.textContent = inv.name || 'Без названия';
+
+                const invAmount = Math.floor(investmentAmount * (inv.percentage / 100));
+                const invSpan = document.createElement('span');
+                invSpan.textContent = `${formatNumber(invAmount)} ₽ (${inv.percentage || 0}%)`;
+
+                invItem.appendChild(invLabel);
+                invItem.appendChild(invSpan);
+
+                totalsSection.appendChild(invItem);
+            });
+        }
+
+        // 6. Остаток на проживание и расход в день (дублирование)
+        const remainingItem = document.createElement('div');
+        remainingItem.classList.add('total-item');
+
+        const label = document.createElement('label');
+        label.textContent = 'Остаток на проживание:';
+
+        const amountSpan = document.createElement('span');
+        amountSpan.textContent = `${formatNumber(remainingLivingExpenses)} ₽ (${formatNumber(perDay)} ₽/день)`;
+
+        remainingItem.appendChild(label);
+        remainingItem.appendChild(amountSpan);
+
+        totalsSection.appendChild(remainingItem);
     }
 
     loadSettings();
