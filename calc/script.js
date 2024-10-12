@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const salaryInput = document.getElementById('salary-input');
     const previousBalanceInput = document.getElementById('previous-balance-input');
     const settingsSection = document.getElementById('settings-section');
-    const resultsSection = document.getElementById('results-section');
 
     // Оплата кредитных карт
     const includeCreditsCheckbox = document.getElementById('include-credits');
@@ -30,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обязательные траты
     const addExpenseBtn = document.getElementById('add-expense-btn');
+    const copyExpensesBtn = document.getElementById('copy-expenses-btn');
     const mandatoryExpensesList = document.getElementById('mandatory-expenses-list');
     const daysOptions = document.getElementById('days-options').getElementsByClassName('option-button');
 
@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let cushionAmount = 10000;
     let selectedDays = 30;
     let creditCardCount = 1;
+    let investmentRelativeValue = null;
 
     // Отображение блоков настроек при загрузке
     if (includeCreditsCheckbox.checked) {
@@ -51,6 +52,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (includeSavingsCheckbox.checked) {
         savingsSettings.classList.remove('hidden');
+    }
+
+    // Пытаемся получить сохраненный пароль
+    function getSavedPassword() {
+        const password = localStorage.getItem('budgetAppPassword');
+        return password;
+    }
+
+    // Если пароль отсутствует, показываем системное окно для запроса пароля
+    if (!getSavedPassword()) {
+        const password = prompt('Введите пароль для доступа к приложению:', '');
+        if (password) {
+            localStorage.setItem('budgetAppPassword', password);
+        }
     }
 
     // Функция форматирования чисел с разделением тысяч
@@ -67,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция форматирования суммы с символом рубля
     function formatAmount(value, currency = 'RUB') {
-        if (currency === 'USD' || currency === 'USDT') {
+        if (currency === 'USD') {
             return '$' + formatNumber(value);
         } else if (currency === 'RUB') {
             return formatNumber(value) + ' ₽';
@@ -83,14 +98,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Предустановленные курсы валют
     const defaultExchangeRates = {
-        USDT: 1,
-        USDT_TO_RUB: 75,
         USD: 1,
-        BTC: 30000,
+        USDT: 1,
+        USDT_TO_RUB: 95.8,
+        BTC: 63093,
         MDL: 0.057,
-        TON: 2,
-        ETH: 2000
+        TON: 5.29,
+        ETH: 2461
     };
+
+    function copyTextToClipboard() {
+        const tempText = this.textContent;
+        this.innerHTML = `<i class="fas fa-check"></i>`;
+        setTimeout(() => {
+            this.innerHTML = tempText;
+        }, 1000);
+        navigator.clipboard.writeText(tempText);
+    }
 
     // Функция для загрузки курсов из localStorage или использования предустановленных
     function loadExchangeRates() {
@@ -104,18 +128,114 @@ document.addEventListener('DOMContentLoaded', function() {
         return rates;
     }
 
+    // Функция для умного округления.
+    function smartRound(value) {
+        if (value >= 1000) {
+            // Округляем в большую сторону
+            return Math.ceil(value);
+        } else if (1000 > value && value >= 10) {
+            // Округляем до десятых
+            return Math.round(value * 10) / 10;
+        } else if (10 > value && value >= 1) {
+            // Округляем до сотых
+            return Math.round(value * 100) / 100;
+        } else if (1 > value && value >= 0.01) {
+            // Округляем до тысячных
+            return Math.round(value * 1000) / 1000;
+        } else {
+            return Math.round(value * 1000000) / 1000000;
+        }
+    }
+
+    // Функция для получения курсов валют с сервера.
+    async function fetchCurrencies(password) {
+        const url = `https://myapihelper.na4u.ru/currencies.php?password=${encodeURIComponent(password)}`;
+
+        // Устанавливаем таймаут на 7 секунд
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+        try {
+            // Выполнение запроса с указанным таймаутом
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal,
+            });
+
+            // Проверяем успешный ли статус ответа
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            // Преобразуем ответ в JSON
+            const jsonData = await response.json();
+            const data = jsonData.data;
+
+            let result = {
+                "rates": {},
+                "lastUpdated": jsonData.timestamp
+            };
+
+            if (data.USDT_USD) {
+                result["rates"]["USD"] = (1 / data.USDT_USD.rate);
+                result["rates"]["USDT"] = (data.USDT_USD.rate);
+            }
+
+            if (data.USDT_RUB) {
+                result["rates"]["USDT_TO_RUB"] = (data.USDT_RUB.rate);
+            }
+
+            if (data.BTC) {
+                result["rates"]["BTC"] = (data.BTC.rate);
+            }
+
+            if (data.USDT_MDL) {
+                result["rates"]["MDL"] = (1 / data.USDT_MDL.rate);
+            }
+
+            if (data.TON) {
+                result["rates"]["TON"] = (data.TON.rate);
+            }
+
+            if (data.ETH) {
+                result["rates"]["ETH"] = (data.ETH.rate);
+            }
+
+            return result;
+
+        } catch (error) {
+            // В случае ошибки возвращаем пустой объект
+            console.error('Fetch error: ', error);
+            return {};
+        } finally {
+            // Очищаем таймаут
+            clearTimeout(timeoutId);
+        }
+    }
+
+    function convertTimestampToISO(timestamp) {
+        // Преобразуем timestamp из секунд в миллисекунды
+        const date = new Date(timestamp * 1000);
+        return date.toISOString();
+    }
+
     // Функция для сохранения курсов в localStorage
-    function saveExchangeRates(rates) {
+    function saveExchangeRates(rates, lastUpdated) {
         localStorage.setItem('exchangeRates', JSON.stringify(rates));
-        localStorage.setItem('exchangeRatesLastUpdated', new Date().toISOString());
+        localStorage.setItem('exchangeRatesLastUpdated', convertTimestampToISO(lastUpdated));
     }
 
     // Функция-заглушка для обновления курсов
-    function updateExchangeRates() {
-        // Здесь можно сделать реальный запрос к API
-        const newRates = defaultExchangeRates; // Пока возвращаем предустановленные значения
-        saveExchangeRates(newRates);
+    async function updateExchangeRates() {
+        refreshRatesButton.textContent = '...';
+        const result = await fetchCurrencies(getSavedPassword());
+
+        const newRates = result.rates;
+        const lastUpdated = result.lastUpdated;
+
+        saveExchangeRates(newRates, lastUpdated);
         displayExchangeRates();
+        refreshRatesButton.textContent = 'Обновить';
     }
 
     // Функция для отображения курсов на странице
@@ -161,11 +281,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (currency === 'USDT') {
                 const usdtToRub = rates['USDT_TO_RUB'] || 75; // Предполагаемый курс USDT к RUB
-                text.textContent = `USDT: ${formatNumber(usdtToRub)} RUB`;
+                text.textContent = `USDT: ${formatNumber(smartRound(usdtToRub))} RUB`;
             } else if (currency === 'USDT_TO_RUB') {
-                text.textContent = `USDT: ${formatNumber(rates[currency])} RUB`;
+                text.textContent = `USDT: ${formatNumber(smartRound(rates[currency]))} RUB`;
             } else {
-                text.textContent = `${currency}: ${formatNumber(rates[currency])} USDT`;
+                text.textContent = `${currency}: ${formatNumber(smartRound(rates[currency]))} USDT`;
             }
 
             rateItem.appendChild(icon);
@@ -204,8 +324,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Обработчик нажатия на кнопку "Обновить"
-    document.getElementById('refresh-rates-btn').addEventListener('click', () => {
-        updateExchangeRates();
+    const refreshRatesButton = document.getElementById('refresh-rates-btn');
+    refreshRatesButton.addEventListener('click', async () => {
+        await updateExchangeRates();
     });
 
     // Вызов отображения курсов при загрузке страницы
@@ -412,6 +533,34 @@ document.addEventListener('DOMContentLoaded', function() {
         mandatoryExpenses.push({ name: '', amount: 0, multiplier: '1.00', currency: 'RUB' });
         updateMandatoryExpensesList();
         updateTotalExpenses();
+    });
+
+    // Копирование списка обязательных трат
+    copyExpensesBtn.addEventListener('click', function() {
+        // Получаем элемент с id copy-expenses-btn и тэгом i
+        const copyExpensesBtn = document.getElementById('copy-expenses-btn');
+        const i = copyExpensesBtn.querySelector('i');
+
+        // На 1 секунду убираем из класса fa-clone и добавляем fa-check, затем возвращаем обратно к fa-clone
+        i.classList.remove('fa-clone');
+        i.classList.add('fa-check');
+        setTimeout(() => {
+            i.classList.remove('fa-check');
+            i.classList.add('fa-clone');
+        }, 1000);
+
+        // Создаем список словарей обязательных трат
+        const copiedExpenses = mandatoryExpenses.map(expense => ({
+            name: expense.name,
+            amount: expense.amount,
+            multiplier: parseFloat(expense.multiplier) || 0,
+            currency: expense.currency,
+            totalCostRub: calculateExpenseTotal(expense)
+        }));
+
+        // Копируем в буфер обмена
+        const jsonString = JSON.stringify(copiedExpenses);
+        navigator.clipboard.writeText(jsonString);
     });
 
     // Функция для расчета итоговой стоимости траты
@@ -642,7 +791,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setOptimalValues(totalIncome);
         } else {
             settingsSection.classList.add('hidden');
-            resultsSection.classList.add('hidden');
         }
     }
 
@@ -718,8 +866,9 @@ document.addEventListener('DOMContentLoaded', function() {
             investmentPercentage = parseInt(btn.dataset.value);
             updateInvestmentAmountDisplay();
             adjustAmounts();
-            saveSettings();
+            updateInvestmentsList();
             updateTotalExpenses(); // Обновление итоговой суммы расходов
+            saveSettings();
         });
     }
 
@@ -1109,7 +1258,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const perCardAmount = Math.floor(creditAmount / creditCardCount);
             const amountSpan = document.createElement('span');
             amountSpan.classList.add('per-card-amount');
-            amountSpan.textContent = `по ${formatAmount(perCardAmount)}`;
+            amountSpan.textContent = `${perCardAmount}`;
+            amountSpan.classList.add('monospace-field');
+
+            amountSpan.addEventListener('click', copyTextToClipboard)
 
             creditItem.appendChild(label);
             creditItem.appendChild(select);
@@ -1127,7 +1279,10 @@ document.addEventListener('DOMContentLoaded', function() {
             label.textContent = 'Отложить на квартиру:';
 
             const amountSpan = document.createElement('span');
-            amountSpan.textContent = `${formatNumber(savingsAmount)} ₽`;
+            amountSpan.textContent = `${savingsAmount}`;
+            amountSpan.classList.add('monospace-field');
+
+            amountSpan.addEventListener('click', copyTextToClipboard)
 
             savingsItem.appendChild(label);
             savingsItem.appendChild(amountSpan);
@@ -1144,7 +1299,10 @@ document.addEventListener('DOMContentLoaded', function() {
             label.textContent = 'Отложить на подушку:';
 
             const amountSpan = document.createElement('span');
-            amountSpan.textContent = `${formatNumber(cushionAmount)} ₽`;
+            amountSpan.textContent = `${cushionAmount}`;
+            amountSpan.classList.add('monospace-field');
+
+            amountSpan.addEventListener('click', copyTextToClipboard)
 
             cushionItem.appendChild(label);
             cushionItem.appendChild(amountSpan);
@@ -1161,7 +1319,10 @@ document.addEventListener('DOMContentLoaded', function() {
             label.textContent = 'Обязательные траты:';
 
             const amountSpan = document.createElement('span');
-            amountSpan.textContent = `${formatNumber(mandatoryExpenses)} ₽`;
+            amountSpan.textContent = `${mandatoryExpenses}`;
+            amountSpan.classList.add('monospace-field');
+
+            amountSpan.addEventListener('click', copyTextToClipboard)
 
             mandatoryItem.appendChild(label);
             mandatoryItem.appendChild(amountSpan);
@@ -1175,14 +1336,23 @@ document.addEventListener('DOMContentLoaded', function() {
             investmentItem.classList.add('total-item');
 
             const label = document.createElement('label');
-            label.textContent = 'Инвестиции:';
+            label.textContent = `Инвестиции: ${formatAmount(investmentAmount)}`;
+            label.id = 'investment-label';
+
+            // Переводим сумму инвестиций из RUB в USDT
+            rates = loadExchangeRates();
+            if (investmentRelativeValue === null) {
+                investmentRelativeValue = smartRound(investmentAmount / rates.USDT_TO_RUB);
+            }
 
             const input = document.createElement('input');
-            input.type = 'text';
-            input.addEventListener('input', function(event) {
-                let value = event.target.value.replace(/[^0-9]/g, '');
-                event.target.value = formatNumberInput(value);
-                investmentAmount = parseInt(value) || 0;
+            input.type = 'number';
+            input.id = 'investment-input';
+            input.value = investmentRelativeValue || 0;
+
+            input.addEventListener('blur', function(event) {
+                investmentRelativeValue = Math.abs(this.value);
+                console.log(investmentRelativeValue);
                 updateTotalsSection();
             });
 
@@ -1197,11 +1367,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 invItem.classList.add('total-item');
 
                 const invLabel = document.createElement('label');
-                invLabel.textContent = inv.name || 'Без названия';
+                invLabel.textContent = `${inv.name || 'Без названия'} (${inv.percentage || 0}%)`;
 
-                const invAmount = Math.floor(investmentAmount * (inv.percentage / 100));
+                const invAmount = smartRound((investmentRelativeValue * (inv.percentage / 100)) || 0);
                 const invSpan = document.createElement('span');
-                invSpan.textContent = `${formatNumber(invAmount)} ₽ (${inv.percentage || 0}%)`;
+                invSpan.textContent = `${invAmount}`;
+                invSpan.classList.add('monospace-field');
+
+                invSpan.addEventListener('click', copyTextToClipboard);
 
                 invItem.appendChild(invLabel);
                 invItem.appendChild(invSpan);

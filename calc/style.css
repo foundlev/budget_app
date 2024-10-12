@@ -122,7 +122,7 @@ input[type="number"]:focus, input[type="text"]:focus {
     display: none;
 }
 
-#add-expense-btn, #calculate-btn, .max-button, #add-investment-btn {
+#add-expense-btn, #calculate-btn, .max-button, #add-investment-btn, #copy-expenses-btn {
     width: 100%;
     padding: 15px;
     background-color: var(--primary-color);
@@ -137,15 +137,29 @@ input[type="number"]:focus, input[type="text"]:focus {
     margin-bottom: 10px;
 }
 
+#add-expense-btn {
+    width: 80%;
+}
+
+#copy-expenses-btn {
+    width: 18.5%;
+}
+
+.mandatory-expense-btns {
+    display: flex;
+    justify-content: space-between; /* Распределяем кнопки по краям */
+    align-items: center; /* Выравнивание по вертикали */
+}
+
 #add-investment-btn {
     margin-bottom: 25px;
 }
 
-#add-expense-btn:hover, #calculate-btn:hover, .max-button:hover, #add-investment-btn:hover {
+#add-expense-btn:hover, #calculate-btn:hover, .max-button:hover, #add-investment-btn:hover, #copy-expenses-btn:hover {
     background-color: var(--primary-color-light);
 }
 
-#add-expense-btn:active, #calculate-btn:active, .max-button:active, #add-investment-btn:active {
+#add-expense-btn:active, #calculate-btn:active, .max-button:active, #add-investment-btn:active, #copy-expenses-btn:active {
     transform: scale(0.98);
 }
 
@@ -599,11 +613,6 @@ input[type="checkbox"]:checked::before {
     color: var(--text-color);
 }
 
-/* Стили для блока итогов */
-.total-item input[type="number"] {
-    text-align: right;
-}
-
 /* Стили для выпадающего списка */
 .styled-select {
     appearance: none;
@@ -657,7 +666,7 @@ input[type="checkbox"]:checked::before {
 }
 
 .total-item input[type="text"],
-.total-item select {
+.total-item select, #investment-input {
     padding: 10px;
     font-size: 16px;
     border: 1px solid var(--primary-color);
@@ -665,7 +674,7 @@ input[type="checkbox"]:checked::before {
     background-color: var(--background-color);
     color: var(--text-color);
     width: 100%;
-    max-width: 200px;
+    max-width: 150px;
     margin-left: 10px;
     text-align: right;
 }
@@ -676,7 +685,7 @@ input[type="checkbox"]:checked::before {
     color: var(--text-color);
 }
 
-.total-item input[type="text"]::placeholder {
+.total-item input[type="text"]::placeholder, #investment-input::placeholder {
     color: rgba(0, 0, 0, 0.4);
 }
 
@@ -688,4 +697,19 @@ input[type="checkbox"]:checked::before {
 
 .label-flex {
     flex: 6;
+}
+
+.monospace-field {
+    font-family: 'Roboto Mono', monospace; /* Используем шрифт Roboto Mono */
+    background-color: #f5f5f5; /* Светлый фон для поля */
+    padding: 10px;
+    white-space: pre-wrap; /* Сохраняем пробелы и переносы строк */
+    user-select: all; /* Позволяет легко выделять текст для копирования */
+    margin-top: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 15%;
+    text-align: center;
 }

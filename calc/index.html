@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- Подключение иконок Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
 </head>
 <body>
 <div class="container">
@@ -50,7 +51,10 @@
             <div id="mandatory-expenses-list">
                 <!-- Список обязательных трат -->
             </div>
-            <button id="add-expense-btn"><i class="fas fa-plus"></i> Добавить трату</button>
+            <div class="mandatory-expense-btns">
+                <button id="add-expense-btn"><i class="fas fa-plus"></i>Добавить трату</button>
+                <button id="copy-expenses-btn"><i class="fas fa-clone"></i></button>
+            </div>
             <div id="mandatory-expenses-total">Сумма: 0 ₽</div>
         </div>
         <!-- Настройки бюджета -->

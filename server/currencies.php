@@ -17,13 +17,15 @@ if (!isset($_GET['password']) || $_GET['password'] !== $passwordFromFile) {
     exit;
 }
 
+$now_time = time();
+
 // Проверяем, есть ли кэш и не устарел ли он (менее 1 часа)
 if (file_exists($cacheFile)) {
     $cache = json_decode(file_get_contents($cacheFile), true);
     $cacheTime = $cache['timestamp'] ?? 0;
-    if (time() - $cacheTime < 3600) {
+    if ($now_time - $cacheTime < 3600) {
         // Если данные актуальны, возвращаем кэшированные данные
-        echo json_encode($cache['data']);
+        echo json_encode($cache);
         exit;
     }
 }
@@ -58,6 +60,10 @@ $data2 = fetch_crypto_data($cryptoUrl2, $apiKey);
 // Запрос на получение котировки USDT в RUB
 $cryptoUrl3 = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=USDT&convert=RUB";
 $data3 = fetch_crypto_data($cryptoUrl3, $apiKey);
+
+// Запрос на получение котировки USDT в MDL
+$cryptoUrl4 = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=USDT&convert=MDL";
+$data4 = fetch_crypto_data($cryptoUrl4, $apiKey);
 
 // Объединение данных
 $result = [];
@@ -97,12 +103,19 @@ if (isset($data3['data']['USDT']['quote']['RUB']['price'])) {
     ];
 }
 
+if (isset($data4['data']['USDT']['quote']['MDL']['price'])) {
+    $result['USDT_MDL'] = [
+        'rate' => $data4['data']['USDT']['quote']['MDL']['price'],
+        'currency' => 'MDL'
+    ];
+}
+
 // Сохранение нового кэша с текущим временем запроса
 $cacheData = [
-    'timestamp' => time(),
+    'timestamp' => $now_time,
     'data' => $result
 ];
 file_put_contents($cacheFile, json_encode($cacheData));
 
 // Возврат результата в формате JSON
-echo json_encode($result);
+echo json_encode($cacheData);
