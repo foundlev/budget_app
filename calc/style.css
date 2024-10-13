@@ -12,19 +12,6 @@
     --font-family: 'Nunito', sans-serif;
 }
 
-/* Поддержка тёмной темы */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background-color: #111827;
-        --surface-color: #1F2937;
-        --text-color: #F9FAFB;
-        --primary-color: #6366F1;
-        --primary-color-light: #818CF8;
-        --danger-color: #F87171;
-        --success-color: #21946e;
-    }
-}
-
 /* Сброс стилей и базовые настройки */
 * {
     box-sizing: border-box;
@@ -701,7 +688,7 @@ input[type="checkbox"]:checked::before {
 
 .monospace-field {
     font-family: 'Roboto Mono', monospace; /* Используем шрифт Roboto Mono */
-    background-color: #f5f5f5; /* Светлый фон для поля */
+    background-color: var(--background-color); /* Светлый фон для поля */
     padding: 10px;
     white-space: pre-wrap; /* Сохраняем пробелы и переносы строк */
     user-select: all; /* Позволяет легко выделять текст для копирования */
@@ -712,4 +699,19 @@ input[type="checkbox"]:checked::before {
     cursor: pointer;
     min-width: 15%;
     text-align: center;
+    /* Добавляем небольшую тень */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Поддержка тёмной темы */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #111827;
+        --surface-color: #1F2937;
+        --text-color: #F9FAFB;
+        --primary-color: #6366F1;
+        --primary-color-light: #818CF8;
+        --danger-color: #F87171;
+        --success-color: #21946e;
+    }
 }
