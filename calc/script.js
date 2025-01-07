@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция для получения курсов валют с сервера.
     async function fetchCurrencies(password) {
-        const url = `https://myapihelper.na4u.ru/currencies.php?password=${encodeURIComponent(password)}`;
+        const url = ``;
 
         // Устанавливаем таймаут на 7 секунд
         const controller = new AbortController();

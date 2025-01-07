@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Запланированные траты</title>
+    <!-- Подключение основного стиля -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Подключение иконок Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
+</head>
+<body>
+    <div class="container">
+        <div id="settings-section">
+            <h2>Запланированные траты</h2>
+            <div id="mandatory-expenses-list">
+                <!-- Список обязательных трат -->
+            </div>
+            <div class="mandatory-expense-btns">
+                <button id="import-expense-btn"><i class="fas fa-download"></i> Импортировать траты</button>
+            </div>
+            <div id="mandatory-expenses-total">Итого: 0 ₽</div>
+        </div>
+    </div>
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <textarea id="expense-input" class="monospace-field" rows="10" placeholder="Введите JSON..."></textarea>
+            <div class="modal-buttons">
+                <button id="paste-json-btn" class="modal-panel-button"><i class="fas fa-paste"></i></button>
+                <button id="add-to-json-btn" class="modal-panel-button" disabled><i class="fas fa-plus-square"></i></button>
+                <div class="vertical-divider"></div> <!-- Вертикальный разделитель -->
+                <button id="load-json-btn" class="modal-panel-button"><i class="fas fa-upload"></i></button>
+                <button id="rewrite-json-btn" class="modal-panel-button" disabled><i class="fas fa-save"></i></button>
+                <div class="vertical-divider"></div> <!-- Вертикальный разделитель -->
+                <button id="cancel-btn" class="modal-panel-button">Отмена</button>
+            </div>
+
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = prefersDarkScheme
+            ? 'https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.min.css'
+            : 'https://cdn.jsdelivr.net/npm/@sweetalert2@11/dist/sweetalert2.min.css';
+        document.head.appendChild(link);
+    </script>
+</body>
+</html>
