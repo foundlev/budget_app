@@ -79,7 +79,7 @@ input[type="number"]:focus, input[type="text"]:focus {
 
 .option-button {
     flex: 1 1 calc(16.66% - 10px); /* 6 кнопок в строке */
-    padding: 12px;
+    padding: 11px;
     border: 1px solid var(--primary-color);
     border-radius: var(--border-radius);
     background-color: var(--surface-color);
